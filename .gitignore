@@ -35,12 +35,14 @@ coverage/
 prisma/*.db
 prisma/*.db-journal
 
-# Storage local
-storage/
-!storage/.gitkeep
+# Storage local (solo el dir RAIZ donde guarda LocalStorageService los uploads).
+# Anclamos con `/` para no matchear `src/shared/storage/` ni `src/modules/storage/`,
+# que son codigo fuente y SI deben commitearse.
+/storage/
+!/storage/.gitkeep
 
 # Backups (pg_dump)
-backups/
+/backups/
 
 # Husky internal
 .husky/_/
