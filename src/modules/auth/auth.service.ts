@@ -29,6 +29,7 @@ export interface LoginResult {
     id: string;
     role: string;
     email: string | null;
+    documentNumber: string | null;
     fullName: string | null;
     mustChangePassword: boolean;
   };
@@ -356,6 +357,7 @@ export class AuthService {
         id: user.id,
         role: user.role,
         email: user.email,
+        documentNumber: user.documentNumber,
         fullName: user.fullName,
         mustChangePassword: user.mustChangePassword,
       },
