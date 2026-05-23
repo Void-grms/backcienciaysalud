@@ -179,16 +179,22 @@ model Reference {
 }
 
 model RefreshToken {
-  id         String    @id @default(uuid()) @db.Uuid
-  userId     String    @map("user_id") @db.Uuid
-  user       User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  jti        String    @unique @db.VarChar(64)
-  tokenHash  String    @map("token_hash") @db.VarChar(255)
-  userAgent  String?   @map("user_agent") @db.Text
-  ip         String?   @db.VarChar(64)
-  expiresAt  DateTime  @map("expires_at") @db.Timestamptz
-  revokedAt  DateTime? @map("revoked_at") @db.Timestamptz
-  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @map("user_id") @db.Uuid
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  jti            String    @unique @db.VarChar(64)
+  tokenHash      String    @map("token_hash") @db.VarChar(255)
+  userAgent      String?   @map("user_agent") @db.Text
+  ip             String?   @db.VarChar(64)
+  // Idle timeout: ultima vez que el usuario interactuo (heartbeat o refresh).
+  // Si supera IDLE_TIMEOUT_MINUTES, el refresh se invalida.
+  lastActivityAt DateTime  @default(now()) @map("last_activity_at") @db.Timestamptz
+  // IP de la ultima interaccion (puede diferir de `ip` que es la del login).
+  // Se actualiza en cada heartbeat/refresh y se audita si cambia.
+  lastIp         String?   @map("last_ip") @db.VarChar(64)
+  expiresAt      DateTime  @map("expires_at") @db.Timestamptz
+  revokedAt      DateTime? @map("revoked_at") @db.Timestamptz
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz
 
   @@index([userId])
   @@index([expiresAt])

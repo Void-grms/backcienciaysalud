@@ -13,6 +13,10 @@ export const envSchema = z.object({
   JWT_SECRET: z.string().min(32, 'JWT_SECRET debe tener al menos 32 caracteres'),
   JWT_ACCESS_TTL: z.string().default('15m'),
   JWT_REFRESH_TTL: z.string().default('7d'),
+  // Inactividad maxima antes de invalidar la sesion (en minutos). El frontend
+  // muestra modal de aviso a los IDLE_TIMEOUT_MINUTES - 2 y hace logout a los
+  // IDLE_TIMEOUT_MINUTES. El backend lo enforca en /auth/refresh.
+  IDLE_TIMEOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(30),
   PASSWORD_BCRYPT_COST: z.coerce.number().int().min(4).max(15).default(12),
 
   STORAGE_DRIVER: z.enum(['local', 's3']).default('local'),

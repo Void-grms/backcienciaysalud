@@ -11,6 +11,11 @@ import type { Env } from '@config/env.validation';
 import { AppEvents, PasswordResetRequestedEvent } from '@shared/events/app-events';
 import { PrismaService } from '@shared/prisma/prisma.service';
 
+interface SessionMeta {
+  ip?: string;
+  userAgent?: string;
+}
+
 const MAX_FAILED_ATTEMPTS = 5;
 const LOCK_DURATION_MS = 10 * 60 * 1000;
 const RESET_TOKEN_TTL_MS = 60 * 60 * 1000;
@@ -40,11 +45,7 @@ export class AuthService {
     private readonly events: EventEmitter2,
   ) {}
 
-  async login(
-    identifier: string,
-    password: string,
-    meta: { ip?: string; userAgent?: string },
-  ): Promise<LoginResult> {
+  async login(identifier: string, password: string, meta: SessionMeta): Promise<LoginResult> {
     const user = await this.findByIdentifier(identifier);
     if (!user) {
       throw new UnauthorizedException('Credenciales invalidas');
@@ -70,7 +71,7 @@ export class AuthService {
     return this.issueTokens(user, meta);
   }
 
-  async refresh(rawToken: string, meta: { ip?: string; userAgent?: string }): Promise<LoginResult> {
+  async refresh(rawToken: string, meta: SessionMeta): Promise<LoginResult> {
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token ausente');
     }
@@ -87,12 +88,98 @@ export class AuthService {
       throw new UnauthorizedException('Usuario no valido');
     }
 
+    // Idle timeout: si la ultima actividad supera el limite, invalidamos.
+    const idleMs = this.config.get('IDLE_TIMEOUT_MINUTES', { infer: true }) * 60_000;
+    const idleSince = Date.now() - record.lastActivityAt.getTime();
+    if (idleSince > idleMs) {
+      await this.prisma.refreshToken.update({
+        where: { id: record.id },
+        data: { revokedAt: new Date() },
+      });
+      this.emitIdleLogout(record.userId, record.user.role, Math.round(idleSince / 60_000));
+      throw new UnauthorizedException('Sesion expirada por inactividad');
+    }
+
+    // Cambio de IP: auditamos pero NO invalidamos (decision de UX para usuarios moviles).
+    this.maybeAuditIpChange(record, meta.ip);
+
     await this.prisma.refreshToken.update({
       where: { id: record.id },
       data: { revokedAt: new Date() },
     });
 
     return this.issueTokens(record.user, meta);
+  }
+
+  // Heartbeat de actividad: el frontend lo llama mientras el usuario interactua
+  // (clics, teclado, etc.) para refrescar lastActivityAt sin emitir un access
+  // token nuevo. Usa la cookie refresh para identificar la sesion: si la cookie
+  // no es valida, la respuesta es 401 (el frontend reacciona haciendo logout).
+  async heartbeat(rawToken: string | undefined, meta: SessionMeta): Promise<void> {
+    if (!rawToken) {
+      throw new UnauthorizedException('Refresh token ausente');
+    }
+    const tokenHash = this.hashToken(rawToken);
+    const record = await this.prisma.refreshToken.findFirst({
+      where: { tokenHash },
+      select: {
+        id: true,
+        userId: true,
+        ip: true,
+        lastIp: true,
+        revokedAt: true,
+        expiresAt: true,
+        lastActivityAt: true,
+        user: { select: { role: true } },
+      },
+    });
+
+    if (!record || record.revokedAt || record.expiresAt.getTime() < Date.now()) {
+      throw new UnauthorizedException('Refresh token invalido');
+    }
+
+    // Si ya esta idle expirado, devolvemos 401 sin actualizar.
+    const idleMs = this.config.get('IDLE_TIMEOUT_MINUTES', { infer: true }) * 60_000;
+    if (Date.now() - record.lastActivityAt.getTime() > idleMs) {
+      throw new UnauthorizedException('Sesion expirada por inactividad');
+    }
+
+    this.maybeAuditIpChange(record, meta.ip);
+
+    await this.prisma.refreshToken.update({
+      where: { id: record.id },
+      data: { lastActivityAt: new Date(), lastIp: meta.ip ?? record.lastIp },
+    });
+  }
+
+  private maybeAuditIpChange(
+    record: { id: string; userId: string; ip: string | null; lastIp: string | null; user: { role: string } },
+    currentIp: string | undefined,
+  ): void {
+    if (!currentIp) return;
+    const previous = record.lastIp ?? record.ip;
+    if (!previous || previous === currentIp) return;
+    this.events.emit(AppEvents.AuditEvent, {
+      action: 'session.ip_changed',
+      entityType: 'user',
+      entityId: record.userId,
+      actorUserId: record.userId,
+      actorRole: record.user.role,
+      summary: `IP de sesion cambio de ${previous} a ${currentIp}`,
+      metadata: { previousIp: previous, currentIp, tokenId: record.id },
+    });
+  }
+
+  private emitIdleLogout(userId: string, role: string, idleMinutes: number): void {
+    this.events.emit(AppEvents.AuditEvent, {
+      action: 'session.idle_logout',
+      entityType: 'user',
+      entityId: userId,
+      actorUserId: userId,
+      actorRole: role,
+      summary: `Sesion cerrada por inactividad (${idleMinutes} min)`,
+      metadata: { idleMinutes },
+    });
   }
 
   async logout(rawToken: string | undefined): Promise<void> {
@@ -236,10 +323,7 @@ export class AuthService {
     await this.prisma.user.update({ where: { id: user.id }, data });
   }
 
-  private async issueTokens(
-    user: User,
-    meta: { ip?: string; userAgent?: string },
-  ): Promise<LoginResult> {
+  private async issueTokens(user: User, meta: SessionMeta): Promise<LoginResult> {
     const accessTtl = this.parseDurationSeconds(this.config.get('JWT_ACCESS_TTL', { infer: true }));
     const refreshTtlMs = this.parseDurationMs(this.config.get('JWT_REFRESH_TTL', { infer: true }));
 

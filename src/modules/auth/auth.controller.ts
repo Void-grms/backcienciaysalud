@@ -96,6 +96,25 @@ export class AuthController {
     res.clearCookie(REFRESH_COOKIE, this.cookieClearOptions());
   }
 
+  // Heartbeat de actividad: el frontend lo invoca mientras el usuario interactua
+  // con la app (clic, teclado, navegacion) para que la sesion no se considere
+  // idle. No emite tokens nuevos, solo toca lastActivityAt en el RefreshToken.
+  // No requiere JwtAuthGuard porque se identifica via la cookie httpOnly del
+  // refresh (mismo principio que /refresh). Limitamos a 30 req/min por IP para
+  // evitar abuso.
+  @Public()
+  @Throttle({ default: { limit: 30, ttl: 60_000 } })
+  @Post('heartbeat')
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @ApiOperation({ summary: 'Marca la sesion como activa (resetea idle timer)' })
+  async heartbeat(@Req() req: Request) {
+    const cookies = req.cookies as Record<string, string | undefined>;
+    await this.auth.heartbeat(cookies[REFRESH_COOKIE], {
+      ip: req.ip,
+      userAgent: req.headers['user-agent'],
+    });
+  }
+
   @Public()
   @Throttle({ default: { limit: 10, ttl: 60_000 } })
   @Post('forgot-password')
