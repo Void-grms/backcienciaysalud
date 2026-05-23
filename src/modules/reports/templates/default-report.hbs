@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <title>Informe {{order.code}}</title>
+  <style>
+    @page { size: A4; margin: 20mm 15mm; }
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Helvetica', 'Arial', sans-serif;
+      font-size: 10pt;
+      color: #111827;
+      margin: 0;
+    }
+    .accent { color: {{lab.primaryColor}}; }
+    .border-accent { border-color: {{lab.primaryColor}}; }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding-bottom: 8px;
+      border-bottom: 2px solid {{lab.primaryColor}};
+    }
+    .header .logo {
+      max-height: 60px;
+      max-width: 180px;
+    }
+    .header .lab-info {
+      text-align: right;
+      font-size: 9pt;
+      color: #4B5563;
+      line-height: 1.4;
+    }
+    .header .lab-info .name {
+      font-size: 13pt;
+      font-weight: 700;
+      color: {{lab.primaryColor}};
+    }
+
+    .patient-block {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 6px 24px;
+      margin: 14px 0 6px;
+      padding: 10px 14px;
+      background: #F3F4F6;
+      border-left: 4px solid {{lab.primaryColor}};
+    }
+    .patient-block .field {
+      font-size: 9pt;
+    }
+    .patient-block .field .label {
+      color: #6B7280;
+      text-transform: uppercase;
+      font-size: 7.5pt;
+      letter-spacing: 0.5px;
+    }
+    .patient-block .field .value {
+      font-weight: 600;
+      font-size: 10pt;
+    }
+
+    .order-meta {
+      display: flex;
+      justify-content: space-between;
+      font-size: 9pt;
+      color: #4B5563;
+      margin-bottom: 10px;
+    }
+    .order-meta .code {
+      font-family: 'Courier New', monospace;
+      font-weight: 700;
+      color: {{lab.primaryColor}};
+      font-size: 12pt;
+    }
+
+    .amend-banner {
+      background: #FEF3C7;
+      border: 1px solid #F59E0B;
+      color: #78350F;
+      padding: 8px 12px;
+      margin: 6px 0 10px;
+      font-size: 9pt;
+    }
+
+    .category-block { margin: 12px 0; page-break-inside: avoid; }
+    .category-title {
+      background: {{lab.primaryColor}};
+      color: #FFFFFF;
+      padding: 4px 10px;
+      font-weight: 700;
+      font-size: 10.5pt;
+      letter-spacing: 0.3px;
+    }
+
+    table.results {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 9.5pt;
+    }
+    table.results thead th {
+      background: #E5E7EB;
+      color: #111827;
+      text-align: left;
+      padding: 4px 6px;
+      font-size: 8.5pt;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    table.results td {
+      padding: 4px 6px;
+      border-bottom: 1px solid #E5E7EB;
+      vertical-align: top;
+    }
+    table.results .col-test  { width: 32%; }
+    table.results .col-value { width: 14%; font-family: 'Courier New', monospace; }
+    table.results .col-unit  { width: 10%; }
+    table.results .col-range { width: 24%; }
+    table.results .col-flag  { width: 20%; }
+
+    .flag-critical {
+      color: #B91C1C;
+      font-weight: 700;
+      background: #FEE2E2;
+      padding: 1px 4px;
+    }
+    .flag-abnormal {
+      color: #B45309;
+      font-weight: 600;
+    }
+    .flag-normal { color: #6B7280; }
+    .observation {
+      color: #4B5563;
+      font-size: 8.5pt;
+      font-style: italic;
+    }
+
+    .signatures {
+      margin-top: 20px;
+      display: grid;
+      grid-template-columns: repeat({{#if professionals.length}}{{professionals.length}}{{else}}1{{/if}}, 1fr);
+      gap: 16px;
+    }
+    .signature {
+      text-align: center;
+      font-size: 9pt;
+    }
+    .signature img {
+      max-height: 60px;
+      margin-bottom: 4px;
+    }
+    .signature .line {
+      border-top: 1px solid #6B7280;
+      margin-top: 36px;
+      padding-top: 4px;
+      font-weight: 700;
+    }
+    .signature .title {
+      color: #6B7280;
+      font-size: 8.5pt;
+    }
+
+    .footer {
+      margin-top: 22px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      font-size: 8pt;
+      color: #6B7280;
+      border-top: 1px solid #E5E7EB;
+      padding-top: 8px;
+    }
+    .footer .qr-block { text-align: center; }
+    .footer .qr-block img { width: 80px; height: 80px; }
+    .footer .qr-block .label { font-size: 7pt; margin-top: 2px; }
+  </style>
+</head>
+<body>
+  <header class="header">
+    {{#if lab.logoUrl}}
+      <img class="logo" src="{{lab.logoUrl}}" alt="Logo" />
+    {{else}}
+      <div class="accent" style="font-size: 16pt; font-weight: 700;">{{lab.commercialName}}</div>
+    {{/if}}
+    <div class="lab-info">
+      <div class="name">{{lab.commercialName}}</div>
+      {{#if lab.address}}<div>{{lab.address}}</div>{{/if}}
+      {{#if lab.phone}}<div>Tel: {{lab.phone}}</div>{{/if}}
+      {{#if lab.taxId}}<div>RUC: {{lab.taxId}}</div>{{/if}}
+    </div>
+  </header>
+
+  {{#if order.isAmended}}
+    <div class="amend-banner">
+      <strong>Informe enmendado.</strong>
+      Esta version sustituye al informe anterior{{#if order.previousCode}} ({{order.previousCode}}){{/if}}.
+    </div>
+  {{/if}}
+
+  <div class="order-meta">
+    <span class="code">{{order.code}}</span>
+    <span>Reporte v{{reportVersion}} — Generado: {{generatedAt}}</span>
+  </div>
+
+  <section class="patient-block">
+    <div class="field">
+      <div class="label">Paciente</div>
+      <div class="value">{{patient.fullName}}</div>
+    </div>
+    <div class="field">
+      <div class="label">Documento</div>
+      <div class="value">{{patient.documentType}} {{patient.documentNumber}}</div>
+    </div>
+    <div class="field">
+      <div class="label">Edad / Sexo</div>
+      <div class="value">{{patient.age}} — {{patient.sex}}</div>
+    </div>
+    <div class="field">
+      <div class="label">Fecha de muestra</div>
+      <div class="value">{{order.sampleTakenAt}}</div>
+    </div>
+    {{#if order.requestingDoctor}}
+    <div class="field">
+      <div class="label">Medico solicitante</div>
+      <div class="value">{{order.requestingDoctor}}</div>
+    </div>
+    {{/if}}
+    {{#if order.reference}}
+    <div class="field">
+      <div class="label">Referencia</div>
+      <div class="value">{{order.reference}}</div>
+    </div>
+    {{/if}}
+  </section>
+
+  {{#each categories}}
+  <section class="category-block">
+    <div class="category-title" style="background: {{categoryColor}}">{{categoryName}}</div>
+    <table class="results">
+      <thead>
+        <tr>
+          <th class="col-test">Prueba</th>
+          <th class="col-value">Resultado</th>
+          <th class="col-unit">Unidad</th>
+          <th class="col-range">Referencia</th>
+          <th class="col-flag">Marca</th>
+        </tr>
+      </thead>
+      <tbody>
+        {{#each rows}}
+        <tr>
+          <td class="col-test">
+            <div><strong>{{testName}}</strong></div>
+            {{#if method}}<div class="observation">{{method}}</div>{{/if}}
+            {{#if observation}}<div class="observation">Obs: {{observation}}</div>{{/if}}
+          </td>
+          <td class="col-value {{flagClass flag}}">
+            {{#if (eq resultType 'numeric')}}
+              {{formatNumber valueNumeric decimals}}
+            {{else}}
+              {{valueText}}
+            {{/if}}
+          </td>
+          <td class="col-unit">{{unit}}</td>
+          <td class="col-range">{{formatRange appliedRange}}</td>
+          <td class="col-flag {{flagClass flag}}">{{flagLabel flag}}</td>
+        </tr>
+        {{/each}}
+      </tbody>
+    </table>
+  </section>
+  {{/each}}
+
+  <section class="signatures">
+    {{#each professionals}}
+    <div class="signature">
+      {{#if signatureUrl}}<img src="{{signatureUrl}}" alt="firma" />{{/if}}
+      <div class="line">{{fullName}}</div>
+      {{#if professionalTitle}}<div class="title">{{professionalTitle}}</div>{{/if}}
+      {{#if licenseNumber}}<div class="title">{{licenseNumber}}</div>{{/if}}
+    </div>
+    {{/each}}
+  </section>
+
+  <footer class="footer">
+    <div>
+      Informe emitido por {{lab.commercialName}} | {{order.code}}
+      {{#if order.validatedAt}}<br />Validado: {{order.validatedAt}}{{/if}}
+    </div>
+    {{#if qrDataUrl}}
+    <div class="qr-block">
+      <img src="{{qrDataUrl}}" alt="Codigo QR de verificacion" />
+      <div class="label">Verifica este informe escaneando el QR</div>
+    </div>
+    {{/if}}
+  </footer>
+</body>
+</html>

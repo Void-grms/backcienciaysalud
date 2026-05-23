@@ -1,0 +1,24 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lab-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: lab
+      POSTGRES_PASSWORD: lab
+      POSTGRES_DB: lab
+    ports:
+      - '5434:5432'
+    volumes:
+      - lab-pgdata:/var/lib/postgresql/data
+      # Nota: las extensiones (pgcrypto, pg_trgm, unaccent) las gestiona Prisma
+      # via la directiva `extensions = [...]` en schema.prisma. No bootstrap-eamos
+      # el init.sql para evitar que Prisma detecte "drift" y exija un reset.
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U lab -d lab']
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  lab-pgdata:

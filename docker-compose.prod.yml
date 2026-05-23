@@ -1,0 +1,105 @@
+# Compose de produccion (ejemplo). Levanta:
+#   - postgres con volumen persistente
+#   - api (build local del Dockerfile multi-stage)
+#   - backup diario via cron sidecar (opcional, comentado abajo)
+#
+# Uso:
+#   1. Copia .env.example a .env.prod y completa los valores reales
+#   2. docker compose -f docker-compose.prod.yml --env-file .env.prod up -d
+#   3. docker compose -f docker-compose.prod.yml logs -f api
+#
+# IMPORTANTE: este compose es para entornos auto-administrados (VPS, servidor
+# on-prem). En Railway, Fly.io, Render, etc., usa railway.json o el Dockerfile
+# directo — la plataforma maneja la DB y el reverse proxy.
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: lab-pg-prod
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-lab}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD requerido}
+      POSTGRES_DB: ${POSTGRES_DB:-lab}
+    # No exponemos puerto al host por defecto: solo la red interna lo ve.
+    # Si necesitas conectarte desde fuera, abre 5432:5432 explicitamente.
+    expose:
+      - '5432'
+    volumes:
+      - lab-pgdata-prod:/var/lib/postgresql/data
+      - ./scripts/backup:/backup
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-lab} -d ${POSTGRES_DB:-lab}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: lab-api-prod
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      PORT: 3000
+      APP_NAME: ${APP_NAME:-Lab Clinico API}
+      APP_URL: ${APP_URL:?APP_URL requerido}
+      FRONT_URL: ${FRONT_URL:?FRONT_URL requerido}
+      PUBLIC_VERIFY_URL: ${PUBLIC_VERIFY_URL:?PUBLIC_VERIFY_URL requerido}
+      DATABASE_URL: postgresql://${POSTGRES_USER:-lab}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-lab}?schema=public
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET requerido (minimo 32 caracteres)}
+      JWT_ACCESS_TTL: ${JWT_ACCESS_TTL:-15m}
+      JWT_REFRESH_TTL: ${JWT_REFRESH_TTL:-7d}
+      PASSWORD_BCRYPT_COST: ${PASSWORD_BCRYPT_COST:-12}
+      STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+      STORAGE_PATH: /app/storage
+      MAIL_DRIVER: ${MAIL_DRIVER:-resend}
+      MAIL_FROM: ${MAIL_FROM}
+      RESEND_API_KEY: ${RESEND_API_KEY}
+      THROTTLE_TTL: ${THROTTLE_TTL:-60}
+      THROTTLE_LIMIT: ${THROTTLE_LIMIT:-100}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      # Chrome viene en la imagen de Alpine; CHROMIUM_PATH ya esta seteado en el Dockerfile.
+    ports:
+      - '${API_PORT:-3000}:3000'
+    volumes:
+      - lab-storage-prod:/app/storage
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://localhost:3000/api/v1/health']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
+  # Sidecar opcional para backups diarios automaticos. Descomentar y ajustar
+  # la zona horaria si se quiere. Los backups se escriben en el volumen del
+  # postgres y se rotan tras 14 dias.
+  # backup:
+  #   image: postgres:16-alpine
+  #   restart: unless-stopped
+  #   depends_on:
+  #     postgres:
+  #       condition: service_healthy
+  #   environment:
+  #     PGPASSWORD: ${POSTGRES_PASSWORD}
+  #     POSTGRES_USER: ${POSTGRES_USER:-lab}
+  #     POSTGRES_DB: ${POSTGRES_DB:-lab}
+  #     TZ: America/Lima
+  #   volumes:
+  #     - ./scripts/backup:/backup
+  #   entrypoint: ['/bin/sh', '-c']
+  #   command: |
+  #     'while true; do
+  #        STAMP=$$(date +%Y%m%d_%H%M%S);
+  #        pg_dump -h postgres -U $$POSTGRES_USER $$POSTGRES_DB | gzip > /backup/$$STAMP.sql.gz;
+  #        find /backup -name "*.sql.gz" -mtime +14 -delete;
+  #        sleep 86400;
+  #      done'
+
+volumes:
+  lab-pgdata-prod:
+  lab-storage-prod:
