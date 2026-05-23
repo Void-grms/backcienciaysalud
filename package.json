@@ -10,7 +10,7 @@
   "packageManager": "pnpm@9.0.0",
   "scripts": {
     "prebuild": "rimraf dist",
-    "build": "nest build && tsc-alias -p tsconfig.build.json",
+    "build": "nest build && tsc-alias -p tsconfig.build.json && tsc -p prisma/tsconfig.seed.json",
     "start": "nest start",
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
@@ -28,6 +28,8 @@
     "db:migrate:deploy": "prisma migrate deploy",
     "db:reset": "prisma migrate reset --force",
     "db:seed": "ts-node prisma/seed.ts",
+    "db:seed:prod": "node dist/prisma/seed.js",
+    "db:deploy": "prisma migrate deploy && node dist/prisma/seed.js",
     "db:studio": "prisma studio",
     "prepare": "husky || true"
   },
