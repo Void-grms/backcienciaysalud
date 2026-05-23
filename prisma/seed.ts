@@ -1,5 +1,6 @@
 import {
   CatalogStatus,
+  DocumentType,
   PrismaClient,
   ResultType,
   Sex,
@@ -37,6 +38,84 @@ async function seedAdmin() {
       mustChangePassword: false,
     },
   });
+}
+
+async function seedPatientUser() {
+  const bcryptCost = Number(process.env.PASSWORD_BCRYPT_COST ?? 12);
+  const documentNumber = '12345678';
+
+  const patient = await prisma.patient.upsert({
+    where: {
+      documentType_documentNumber: {
+        documentType: DocumentType.DNI,
+        documentNumber,
+      },
+    },
+    update: {},
+    create: {
+      documentType: DocumentType.DNI,
+      documentNumber,
+      firstName: 'Maria',
+      lastName: 'Paciente Demo',
+      birthDate: new Date('1990-05-15'),
+      sex: Sex.F,
+      phone: '+51999111222',
+      email: 'paciente.demo@laboratorio.com',
+    },
+  });
+
+  const passwordHash = await bcrypt.hash('Paciente123!', bcryptCost);
+  const user = await prisma.user.upsert({
+    where: { documentNumber },
+    update: { patientId: patient.id },
+    create: {
+      documentNumber,
+      passwordHash,
+      role: UserRole.patient,
+      status: UserStatus.active,
+      fullName: 'Maria Paciente Demo',
+      patientId: patient.id,
+      mustChangePassword: false,
+    },
+  });
+
+  return { patient, user };
+}
+
+async function seedReferenceUser() {
+  const bcryptCost = Number(process.env.PASSWORD_BCRYPT_COST ?? 12);
+  const referenceEmail = 'referencia.demo@laboratorio.com';
+  const referenceName = 'Clinica Demo SAC';
+
+  // El modelo Reference no tiene unique fuera del id, hacemos findFirst + create.
+  const reference =
+    (await prisma.reference.findFirst({ where: { name: referenceName, deletedAt: null } })) ??
+    (await prisma.reference.create({
+      data: {
+        name: referenceName,
+        taxId: '20123456789',
+        contactName: 'Dr. Juan Referente',
+        contactEmail: referenceEmail,
+        contactPhone: '+51998877665',
+      },
+    }));
+
+  const passwordHash = await bcrypt.hash('Referencia123!', bcryptCost);
+  const user = await prisma.user.upsert({
+    where: { email: referenceEmail },
+    update: { referenceId: reference.id },
+    create: {
+      email: referenceEmail,
+      passwordHash,
+      role: UserRole.reference_user,
+      status: UserStatus.active,
+      fullName: 'Dr. Juan Referente',
+      referenceId: reference.id,
+      mustChangePassword: false,
+    },
+  });
+
+  return { reference, user };
 }
 
 async function seedLabConfig() {
@@ -143,13 +222,21 @@ async function main() {
   const professional = await seedProfessional();
   await seedCategories(professional.id);
   await seedSampleHemogram();
+  const { patient, user: patientUser } = await seedPatientUser();
+  const { reference, user: referenceUser } = await seedReferenceUser();
 
   console.log('Seed completado:');
-  console.log('  - Admin:           ', admin.email);
   console.log('  - LabConfig:       ', lab.commercialName);
   console.log('  - Profesional:     ', professional.fullName);
   console.log('  - Categorias:      ', BASE_CATEGORIES.length);
   console.log('  - Prueba ejemplo:  ', 'HB (Hemoglobina) con 3 rangos referenciales');
+  console.log('');
+  console.log('Usuarios de prueba (los 3 roles):');
+  console.log('  [ADMIN]      login:', admin.email,        '  /  password: Admin123!');
+  console.log('  [PACIENTE]   login:', patientUser.documentNumber, '       /  password: Paciente123!');
+  console.log('               ->', patient.firstName, patient.lastName);
+  console.log('  [REFERENCIA] login:', referenceUser.email, '  /  password: Referencia123!');
+  console.log('               ->', reference.name);
 }
 
 main()
