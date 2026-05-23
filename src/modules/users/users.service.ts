@@ -66,7 +66,9 @@ export class UsersService {
     return user;
   }
 
-  async create(dto: CreateUserDto): Promise<{ user: ReturnType<UsersService['toPublic']>; temporaryPassword: string | null }> {
+  async create(
+    dto: CreateUserDto,
+  ): Promise<{ user: ReturnType<UsersService['toPublic']>; temporaryPassword: string | null }> {
     if (dto.role === UserRole.patient) {
       throw new BadRequestException(
         'Los usuarios de pacientes se crean desde /patients/:id/portal-access',

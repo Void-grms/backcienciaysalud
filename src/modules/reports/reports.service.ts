@@ -1,9 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { OrderState, Prisma, Sex } from '@prisma/client';
 import * as crypto from 'crypto';
@@ -45,7 +40,11 @@ export class ReportsService {
   // Devuelve el PDF actual de la orden, generandolo si aun no existe.
   async getPdf(orderId: string, actor: AuthUser): Promise<{ buffer: Buffer; filename: string }> {
     const order = await this.orders.findByIdOrCode(orderId, actor);
-    if (order.state !== OrderState.validated && order.state !== OrderState.delivered && order.state !== OrderState.amended) {
+    if (
+      order.state !== OrderState.validated &&
+      order.state !== OrderState.delivered &&
+      order.state !== OrderState.amended
+    ) {
       throw new ConflictException(
         `La orden esta en estado ${order.state}; aun no se puede generar el informe`,
       );
@@ -268,8 +267,14 @@ export class ReportsService {
         flag: it.result?.flag ?? 'none',
         appliedRange: it.result?.appliedRange
           ? {
-              valueMin: it.result.appliedRange.valueMin != null ? Number(it.result.appliedRange.valueMin) : null,
-              valueMax: it.result.appliedRange.valueMax != null ? Number(it.result.appliedRange.valueMax) : null,
+              valueMin:
+                it.result.appliedRange.valueMin != null
+                  ? Number(it.result.appliedRange.valueMin)
+                  : null,
+              valueMax:
+                it.result.appliedRange.valueMax != null
+                  ? Number(it.result.appliedRange.valueMax)
+                  : null,
               qualitativeExpected: it.result.appliedRange.qualitativeExpected,
               displayText: it.result.appliedRange.displayText,
             }

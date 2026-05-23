@@ -43,4 +43,7 @@ jobs:
       - run: pnpm lint:check
       - run: pnpm typecheck
       - run: pnpm db:migrate:deploy
-      - run: pnpm test
+      # Seed minimo: admin + lab_config + categorias. Los e2e usan el admin
+      # para autenticarse, asi que es requisito del job.
+      - run: pnpm db:seed
+      - run: pnpm test:e2e

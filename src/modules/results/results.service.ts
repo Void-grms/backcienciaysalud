@@ -1,15 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  Patient,
-  Result,
-  ResultType,
-  Test,
-} from '@prisma/client';
+import { Patient, Result, ResultType, Test } from '@prisma/client';
 
 import type { AuthUser } from '@shared/auth/auth-user';
 import { AppEvents } from '@shared/events/app-events';
@@ -256,11 +247,8 @@ export class ResultsService {
       }
     } else {
       if (numeric != null) {
-        throw new BadRequestException(
-          'Solo las pruebas numericas aceptan valueNumeric',
-        );
+        throw new BadRequestException('Solo las pruebas numericas aceptan valueNumeric');
       }
     }
   }
-
 }

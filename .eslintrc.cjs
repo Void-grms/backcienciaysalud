@@ -15,7 +15,11 @@ module.exports = {
     node: true,
     jest: true,
   },
-  ignorePatterns: ['.eslintrc.cjs', 'dist', 'node_modules', 'prisma/seed.ts'],
+  // test/ se compila aparte con ts-jest (jest-e2e.json). Lo excluimos del lint
+  // global porque no esta en `tsconfig.json#include` y dispara "parsing error
+  // - file was not found in any of the provided project(s)" cuando eslint
+  // intenta usar el type-aware parser.
+  ignorePatterns: ['.eslintrc.cjs', 'dist', 'node_modules', 'prisma/seed.ts', 'test/'],
   rules: {
     '@typescript-eslint/interface-name-prefix': 'off',
     '@typescript-eslint/explicit-function-return-type': 'off',

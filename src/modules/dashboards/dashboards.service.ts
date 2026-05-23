@@ -24,15 +24,7 @@ export class DashboardsService {
     // que el dashboard refleje siempre "ahora menos N dias", no el momento
     // del module load.
     const now = new Date();
-    const startOfToday = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-      0,
-      0,
-      0,
-      0,
-    );
+    const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 0, 0, 0, 0);
     const last7d = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const last30d = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
@@ -118,9 +110,7 @@ export class DashboardsService {
     // Hidratamos ids con nombres en una segunda pasada (sin transaccion: los
     // ids salieron del agregado anterior y el catalogo cambia poco).
     const testIds = topTestsRaw.map((t) => t.testId);
-    const refIds = topRefsRaw
-      .map((r) => r.referenceId)
-      .filter((id): id is string => id !== null);
+    const refIds = topRefsRaw.map((r) => r.referenceId).filter((id): id is string => id !== null);
 
     const [tests, refs] = await Promise.all([
       testIds.length > 0
@@ -173,8 +163,7 @@ export class DashboardsService {
         .map((t) => {
           const meta = testById.get(t.testId);
           const c = t._count;
-          const count =
-            typeof c === 'object' && c !== null && 'testId' in c ? (c.testId ?? 0) : 0;
+          const count = typeof c === 'object' && c !== null && 'testId' in c ? (c.testId ?? 0) : 0;
           return meta
             ? {
                 testId: t.testId,
@@ -191,9 +180,7 @@ export class DashboardsService {
           const meta = refById.get(r.referenceId);
           const c = r._count;
           const count =
-            typeof c === 'object' && c !== null && 'referenceId' in c
-              ? (c.referenceId ?? 0)
-              : 0;
+            typeof c === 'object' && c !== null && 'referenceId' in c ? (c.referenceId ?? 0) : 0;
           return meta
             ? {
                 referenceId: r.referenceId,
@@ -207,7 +194,9 @@ export class DashboardsService {
   }
 
   // Serie temporal diaria (ordenes creadas vs entregadas) de los ultimos N dias.
-  async dailyTimeline(days = 30): Promise<Array<{ date: string; created: number; delivered: number }>> {
+  async dailyTimeline(
+    days = 30,
+  ): Promise<Array<{ date: string; created: number; delivered: number }>> {
     const bounded = Math.min(Math.max(days, 1), 90);
     const since = new Date(Date.now() - bounded * 24 * 60 * 60 * 1000);
 

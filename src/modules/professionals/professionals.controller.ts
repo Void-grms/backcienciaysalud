@@ -14,13 +14,7 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import {
-  ApiBearerAuth,
-  ApiBody,
-  ApiConsumes,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiBody, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { UserRole } from '@prisma/client';
 
 import { CurrentUser } from '@shared/decorators/current-user.decorator';
@@ -63,10 +57,7 @@ export class ProfessionalsController {
     },
   })
   @ApiOperation({ summary: 'Crea profesional, opcionalmente con imagen de firma' })
-  create(
-    @Body() dto: CreateProfessionalDto,
-    @UploadedFile() signature?: Express.Multer.File,
-  ) {
+  create(@Body() dto: CreateProfessionalDto, @UploadedFile() signature?: Express.Multer.File) {
     if (signature) assertImage(signature, SIGNATURE_CONSTRAINTS, 'signature');
     return this.service.create(dto, signature);
   }

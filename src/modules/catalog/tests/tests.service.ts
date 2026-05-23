@@ -4,12 +4,7 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import {
-  CatalogStatus,
-  Prisma,
-  ResultType,
-  Test,
-} from '@prisma/client';
+import { CatalogStatus, Prisma, ResultType, Test } from '@prisma/client';
 
 import { PrismaService } from '@shared/prisma/prisma.service';
 import { paginated, Paginated } from '@shared/utils/paging';
@@ -199,15 +194,10 @@ export class TestsService {
     }
   }
 
-  private assertOptionsConsistent(
-    resultType: ResultType,
-    options?: TestOptionDto[] | null,
-  ): void {
+  private assertOptionsConsistent(resultType: ResultType, options?: TestOptionDto[] | null): void {
     if (resultType === ResultType.qualitative) {
       if (!options || options.length < 2) {
-        throw new BadRequestException(
-          'Las pruebas cualitativas requieren al menos 2 opciones',
-        );
+        throw new BadRequestException('Las pruebas cualitativas requieren al menos 2 opciones');
       }
     } else if (options && options.length > 0) {
       throw new BadRequestException(

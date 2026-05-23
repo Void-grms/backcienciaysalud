@@ -1,11 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class CreateReferenceUserDto {
   @ApiProperty({ example: 'medico@salud-total.pe' })
@@ -20,8 +14,7 @@ export class CreateReferenceUserDto {
   fullName!: string;
 
   @ApiPropertyOptional({
-    description:
-      'Contrasena temporal opcional. Si no se envia, se genera y se obliga al cambio.',
+    description: 'Contrasena temporal opcional. Si no se envia, se genera y se obliga al cambio.',
   })
   @IsOptional()
   @IsString()

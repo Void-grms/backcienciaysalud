@@ -32,10 +32,7 @@ export class XlsxParserService {
     return { payload: { categories, tests, ranges }, errors };
   }
 
-  private parseCategories(
-    wb: ExcelJS.Workbook,
-    errors: ImportError[],
-  ): ParsedCategoryRow[] {
+  private parseCategories(wb: ExcelJS.Workbook, errors: ImportError[]): ParsedCategoryRow[] {
     const ws = wb.getWorksheet('Categorias');
     if (!ws) return [];
     const out: ParsedCategoryRow[] = [];
@@ -49,7 +46,12 @@ export class XlsxParserService {
       const displayOrder = this.int(row, 4);
 
       if (!name) {
-        errors.push({ sheet: 'Categorias', row: rowNumber, column: 'nombre', message: 'requerido' });
+        errors.push({
+          sheet: 'Categorias',
+          row: rowNumber,
+          column: 'nombre',
+          message: 'requerido',
+        });
         return;
       }
       if (color && !/^#[0-9A-Fa-f]{6}$/.test(color)) {
@@ -182,8 +184,20 @@ export class XlsxParserService {
       if (!testCode) fail('codigo_prueba', 'requerido');
       if (!['M', 'F', 'A'].includes(sexRaw)) fail('sexo', 'debe ser M, F o A');
 
-      const ageMinDays = this.resolveAge(ageMinValue, ageMinUnit, 'edad_min_unidad', rowNumber, fail);
-      const ageMaxDays = this.resolveAge(ageMaxValue, ageMaxUnit, 'edad_max_unidad', rowNumber, fail);
+      const ageMinDays = this.resolveAge(
+        ageMinValue,
+        ageMinUnit,
+        'edad_min_unidad',
+        rowNumber,
+        fail,
+      );
+      const ageMaxDays = this.resolveAge(
+        ageMaxValue,
+        ageMaxUnit,
+        'edad_max_unidad',
+        rowNumber,
+        fail,
+      );
 
       let physiologicalState: PhysiologicalState | null = null;
       if (physiologicalStateRaw && physiologicalStateRaw !== 'none') {
@@ -194,12 +208,7 @@ export class XlsxParserService {
         }
       }
 
-      if (
-        valueMin == null &&
-        valueMax == null &&
-        !qualitativeExpected &&
-        !displayText
-      ) {
+      if (valueMin == null && valueMax == null && !qualitativeExpected && !displayText) {
         fail('valor_min', 'el rango no tiene contenido (ni valores ni texto)');
       }
 
@@ -238,9 +247,7 @@ export class XlsxParserService {
   }
 
   private isResultType(s: string): s is ResultType {
-    return (['numeric', 'text', 'qualitative', 'observation'] as const).includes(
-      s as ResultType,
-    );
+    return (['numeric', 'text', 'qualitative', 'observation'] as const).includes(s as ResultType);
   }
 
   private isPhysiologicalState(s: string): s is PhysiologicalState {

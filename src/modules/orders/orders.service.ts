@@ -7,11 +7,7 @@ import {
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import {
-  OrderState,
-  Prisma,
-  UserRole,
-} from '@prisma/client';
+import { OrderState, Prisma, UserRole } from '@prisma/client';
 
 import type { AuthUser } from '@shared/auth/auth-user';
 import { AppEvents, AuditEvent, OrderDeliveredEvent } from '@shared/events/app-events';
@@ -25,11 +21,7 @@ import { CreateOrderDto, OrderPanelEntryDto, OrderTestEntryDto } from './dto/cre
 import { ListOrdersDto } from './dto/list-orders.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { OrderCodeService } from './order-code.service';
-import {
-  assertTransition,
-  canEditItems,
-  canEditMetadata,
-} from './order-state';
+import { assertTransition, canEditItems, canEditMetadata } from './order-state';
 
 @Injectable()
 export class OrdersService {
@@ -84,9 +76,7 @@ export class OrdersService {
   }
 
   async findByIdOrCode(idOrCode: string, actor: AuthUser) {
-    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
-      idOrCode,
-    );
+    const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(idOrCode);
     const where: Prisma.OrderWhereInput = {
       ...(isUuid ? { id: idOrCode } : { code: idOrCode }),
       deletedAt: null,
@@ -317,9 +307,7 @@ export class OrdersService {
 
     const missing = items.filter((it) => !this.hasMeaningfulValue(it.result, it.test.resultType));
     if (missing.length > 0) {
-      throw new UnprocessableEntityException(
-        `Hay ${missing.length} prueba(s) sin resultado`,
-      );
+      throw new UnprocessableEntityException(`Hay ${missing.length} prueba(s) sin resultado`);
     }
 
     const categoryIds = Array.from(new Set(items.map((i) => i.test.categoryId)));
@@ -337,9 +325,7 @@ export class OrdersService {
     }
     if (missingProfessional.length > 0) {
       const uniq = Array.from(new Set(missingProfessional)).join(', ');
-      throw new UnprocessableEntityException(
-        `Falta profesional firmante en categorias: ${uniq}`,
-      );
+      throw new UnprocessableEntityException(`Falta profesional firmante en categorias: ${uniq}`);
     }
 
     return this.changeState(order.id, order.state, OrderState.validated, actor, {
@@ -368,10 +354,17 @@ export class OrdersService {
     const order = await this.requireOrder(id);
     this.assertCanWrite(order, actor);
     assertTransition(order.state, OrderState.cancelled);
-    return this.changeState(order.id, order.state, OrderState.cancelled, actor, {
-      cancelledAt: new Date(),
-      stateReason: dto.reason,
-    }, dto.reason);
+    return this.changeState(
+      order.id,
+      order.state,
+      OrderState.cancelled,
+      actor,
+      {
+        cancelledAt: new Date(),
+        stateReason: dto.reason,
+      },
+      dto.reason,
+    );
   }
 
   // Crea una nueva orden enmienda: clona items+resultados de la original,
@@ -521,9 +514,7 @@ export class OrdersService {
     const order = await this.requireOrder(id);
     this.assertCanWrite(order, actor);
     if (!this.canEditResults(order.state)) {
-      throw new ConflictException(
-        `No se pueden capturar resultados en estado ${order.state}`,
-      );
+      throw new ConflictException(`No se pueden capturar resultados en estado ${order.state}`);
     }
     return order;
   }
@@ -556,9 +547,7 @@ export class OrdersService {
     const order = await this.requireOrder(id);
     this.assertCanWrite(order, actor);
     if (!predicate(order.state)) {
-      throw new ConflictException(
-        `No se pueden editar ${label} en estado ${order.state}`,
-      );
+      throw new ConflictException(`No se pueden editar ${label} en estado ${order.state}`);
     }
     return order;
   }

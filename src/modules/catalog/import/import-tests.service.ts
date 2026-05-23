@@ -1,16 +1,5 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
-import {
-  CatalogStatus,
-  ImportJob,
-  ImportJobStatus,
-  Prisma,
-  ResultType,
-} from '@prisma/client';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { CatalogStatus, ImportJob, ImportJobStatus, Prisma, ResultType } from '@prisma/client';
 import * as ExcelJS from 'exceljs';
 
 import { PrismaService } from '@shared/prisma/prisma.service';
@@ -36,11 +25,7 @@ export class ImportTestsService {
     private readonly parser: XlsxParserService,
   ) {}
 
-  async dryRun(
-    file: Buffer,
-    filename: string | undefined,
-    actorId: string,
-  ): Promise<ImportJob> {
+  async dryRun(file: Buffer, filename: string | undefined, actorId: string): Promise<ImportJob> {
     const { payload, errors } = await this.parser.parse(file);
 
     const semanticErrors = await this.validateSemantically(payload);
@@ -76,14 +61,14 @@ export class ImportTestsService {
       throw new BadRequestException('El job de importacion ha expirado');
     }
 
-    const errors = (job.errors as unknown) as ImportError[];
+    const errors = job.errors as unknown as ImportError[];
     if (errors.length > 0) {
       throw new BadRequestException(
         `No se puede confirmar: hay ${errors.length} errores. Corregelos y reintenta.`,
       );
     }
 
-    const payload = (job.payload as unknown) as ImportPayload;
+    const payload = job.payload as unknown as ImportPayload;
 
     await this.prisma.$transaction(async (tx) => {
       await this.applyCategories(tx, payload.categories);
@@ -96,14 +81,14 @@ export class ImportTestsService {
       data: { status: ImportJobStatus.confirmed, confirmedAt: new Date() },
     });
 
-    return { summary: (job.summary as unknown) as ImportSummary, jobId: job.id };
+    return { summary: job.summary as unknown as ImportSummary, jobId: job.id };
   }
 
   async generateErrorsXlsx(importToken: string): Promise<{ buffer: Buffer; filename: string }> {
     const job = await this.prisma.importJob.findUnique({ where: { id: importToken } });
     if (!job) throw new NotFoundException('Job de importacion no encontrado');
 
-    const errors = (job.errors as unknown) as ImportError[];
+    const errors = job.errors as unknown as ImportError[];
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Errores');
     ws.columns = [
@@ -127,9 +112,7 @@ export class ImportTestsService {
   private async validateSemantically(payload: ImportPayload): Promise<ImportError[]> {
     const errors: ImportError[] = [];
 
-    const knownCategoryNames = new Set<string>(
-      payload.categories.map((c) => c.name.toLowerCase()),
-    );
+    const knownCategoryNames = new Set<string>(payload.categories.map((c) => c.name.toLowerCase()));
     const existingCategories = await this.prisma.category.findMany({
       where: { deletedAt: null },
       select: { name: true },
@@ -179,14 +162,10 @@ export class ImportTestsService {
       (await this.prisma.test.findMany({ select: { code: true } })).map((t) => t.code),
     );
 
-    const catToCreate = payload.categories.filter(
-      (c) => !existingCategoryNames.has(c.name),
-    ).length;
+    const catToCreate = payload.categories.filter((c) => !existingCategoryNames.has(c.name)).length;
     const catToUpdate = payload.categories.length - catToCreate;
 
-    const testsToCreate = payload.tests.filter(
-      (t) => !existingTestCodes.has(t.code),
-    ).length;
+    const testsToCreate = payload.tests.filter((t) => !existingTestCodes.has(t.code)).length;
     const testsToUpdate = payload.tests.length - testsToCreate;
 
     return {
@@ -229,9 +208,7 @@ export class ImportTestsService {
       where: { deletedAt: null },
       select: { id: true, name: true },
     });
-    const categoryIdByName = new Map(
-      categories.map((c) => [c.name.toLowerCase(), c.id]),
-    );
+    const categoryIdByName = new Map(categories.map((c) => [c.name.toLowerCase(), c.id]));
 
     const testIdByCode = new Map<string, string>();
     for (const row of rows) {

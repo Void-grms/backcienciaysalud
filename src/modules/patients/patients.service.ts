@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Prisma, UserRole, UserStatus } from '@prisma/client';
@@ -120,7 +116,10 @@ export class PatientsService {
   }
 
   // Crea (o resetea) el usuario del portal del paciente. Login = documentNumber.
-  async grantPortalAccess(patientId: string, actor?: AuthUser): Promise<{ documentNumber: string; temporaryPassword: string }> {
+  async grantPortalAccess(
+    patientId: string,
+    actor?: AuthUser,
+  ): Promise<{ documentNumber: string; temporaryPassword: string }> {
     const patient = await this.findById(patientId);
     const cost = this.config.get('PASSWORD_BCRYPT_COST', { infer: true });
     const temporary = crypto.randomBytes(9).toString('base64url');
@@ -147,9 +146,7 @@ export class PatientsService {
         where: { documentNumber: patient.documentNumber },
       });
       if (conflict) {
-        throw new ConflictException(
-          'Ya existe un usuario con ese numero de documento',
-        );
+        throw new ConflictException('Ya existe un usuario con ese numero de documento');
       }
       await this.prisma.user.create({
         data: {

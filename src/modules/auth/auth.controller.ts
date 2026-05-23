@@ -12,12 +12,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Throttle } from '@nestjs/throttler';
-import {
-  ApiBearerAuth,
-  ApiOkResponse,
-  ApiOperation,
-  ApiTags,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOkResponse, ApiOperation, ApiTags } from '@nestjs/swagger';
 import type { Request, Response } from 'express';
 
 import type { Env } from '@config/env.validation';
@@ -107,8 +102,7 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({
     summary: 'Solicita el envio de un correo con token de reseteo',
-    description:
-      'Por seguridad siempre responde 204, independientemente de si el email existe.',
+    description: 'Por seguridad siempre responde 204, independientemente de si el email existe.',
   })
   async forgot(@Body() dto: ForgotPasswordDto) {
     const token = await this.auth.forgotPassword(dto.email);

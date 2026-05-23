@@ -1,12 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsHexColor,
-  IsOptional,
-  IsString,
-  MaxLength,
-  MinLength,
-} from 'class-validator';
+import { IsEmail, IsHexColor, IsOptional, IsString, MaxLength, MinLength } from 'class-validator';
 
 export class UpdateLabConfigDto {
   @ApiPropertyOptional()

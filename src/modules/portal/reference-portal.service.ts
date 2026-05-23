@@ -11,7 +11,12 @@ export class ReferencePortalService {
 
   // Lista los pacientes que la referencia derivo (distintos en el conjunto
   // de ordenes asignadas a ella). Paginado.
-  async listPatients(actor: AuthUser, page = 1, perPage = 25, search?: string): Promise<Paginated<unknown>> {
+  async listPatients(
+    actor: AuthUser,
+    page = 1,
+    perPage = 25,
+    search?: string,
+  ): Promise<Paginated<unknown>> {
     if (actor.role !== UserRole.reference_user) {
       throw new ForbiddenException('Solo usuarios de referencia');
     }

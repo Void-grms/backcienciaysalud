@@ -1,11 +1,4 @@
-import {
-  Body,
-  Controller,
-  Get,
-  Put,
-  UploadedFile,
-  UseInterceptors,
-} from '@nestjs/common';
+import { Body, Controller, Get, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import {
   ApiBearerAuth,
@@ -45,9 +38,7 @@ export class LabConfigController {
   }
 
   @Put('logo')
-  @UseInterceptors(
-    FileInterceptor('logo', { limits: { fileSize: LOGO_CONSTRAINTS.maxBytes * 2 } }),
-  )
+  @UseInterceptors(FileInterceptor('logo', { limits: { fileSize: LOGO_CONSTRAINTS.maxBytes * 2 } }))
   @ApiConsumes('multipart/form-data')
   @ApiBody({
     schema: {
@@ -57,10 +48,7 @@ export class LabConfigController {
     },
   })
   @ApiOperation({ summary: 'Sube/actualiza el logo del laboratorio' })
-  updateLogo(
-    @UploadedFile() logo: Express.Multer.File | undefined,
-    @CurrentUser() user: AuthUser,
-  ) {
+  updateLogo(@UploadedFile() logo: Express.Multer.File | undefined, @CurrentUser() user: AuthUser) {
     assertImage(logo, LOGO_CONSTRAINTS, 'logo');
     return this.service.updateLogo(logo, user);
   }

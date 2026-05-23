@@ -58,29 +58,21 @@ export class ResultFlaggerService {
     return this.flagNumeric(test, range, this.toNumber(value.numeric));
   }
 
-  private flagQualitative(
-    range: ReferenceRange | null,
-    text: string | null,
-  ): FlagResult {
+  private flagQualitative(range: ReferenceRange | null, text: string | null): FlagResult {
     if (!range?.qualitativeExpected) {
       return { flag: ResultFlag.none, appliedRangeId: range?.id ?? null };
     }
     if (!text) {
       return { flag: ResultFlag.abnormal, appliedRangeId: range.id };
     }
-    const equal =
-      text.trim().toUpperCase() === range.qualitativeExpected.trim().toUpperCase();
+    const equal = text.trim().toUpperCase() === range.qualitativeExpected.trim().toUpperCase();
     return {
       flag: equal ? ResultFlag.normal : ResultFlag.abnormal,
       appliedRangeId: range.id,
     };
   }
 
-  private flagNumeric(
-    test: TestForFlag,
-    range: ReferenceRange | null,
-    value: number,
-  ): FlagResult {
+  private flagNumeric(test: TestForFlag, range: ReferenceRange | null, value: number): FlagResult {
     if (test.minCritical != null && value <= this.toNumber(test.minCritical)) {
       return { flag: ResultFlag.critical_low, appliedRangeId: range?.id ?? null };
     }

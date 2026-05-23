@@ -32,9 +32,7 @@ export class NotificationsSubscriber {
     try {
       await this.notifications.sendPasswordReset(event.email, event.token);
     } catch (err) {
-      this.logger.error(
-        `Fallo al enviar reset a ${event.email}: ${(err as Error).message}`,
-      );
+      this.logger.error(`Fallo al enviar reset a ${event.email}: ${(err as Error).message}`);
     }
   }
 

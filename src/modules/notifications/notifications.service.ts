@@ -1,16 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  Logger,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import {
-  NotificationChannel,
-  NotificationStatus,
-  Prisma,
-  UserRole,
-} from '@prisma/client';
+import { NotificationChannel, NotificationStatus, Prisma, UserRole } from '@prisma/client';
 
 import type { Env } from '@config/env.validation';
 import { PrismaService } from '@shared/prisma/prisma.service';
@@ -94,9 +84,7 @@ export class NotificationsService {
     const order = await this.prisma.order.findUnique({ where: { id: orderId } });
     if (!order) throw new NotFoundException('Orden no encontrada');
     if (order.state !== 'delivered' && order.state !== 'amended') {
-      throw new BadRequestException(
-        `No se puede reenviar: la orden esta en estado ${order.state}`,
-      );
+      throw new BadRequestException(`No se puede reenviar: la orden esta en estado ${order.state}`);
     }
     const before = await this.prisma.notificationsLog.count({ where: { orderId } });
     await this.notifyOrderDelivered(orderId);
@@ -108,9 +96,7 @@ export class NotificationsService {
 
   async sendPasswordReset(email: string, token: string): Promise<void> {
     const lab = await this.loadLabBranding();
-    const verifyBase = this.config
-      .get('FRONT_URL', { infer: true })
-      .replace(/\/+$/, '');
+    const verifyBase = this.config.get('FRONT_URL', { infer: true }).replace(/\/+$/, '');
     const resetUrl = `${verifyBase}/reset-password?token=${encodeURIComponent(token)}`;
 
     await this.send({
@@ -203,10 +189,7 @@ export class NotificationsService {
       await this.prisma.notificationsLog.update({
         where: { id: logRow.id },
         data: {
-          status:
-            result.status === 'sent'
-              ? NotificationStatus.sent
-              : NotificationStatus.skipped,
+          status: result.status === 'sent' ? NotificationStatus.sent : NotificationStatus.skipped,
           providerId: result.providerId,
         },
       });
@@ -264,9 +247,7 @@ export class NotificationsService {
 
     if (order.reference) {
       // Usuarios reference_user > contactEmail de la referencia (en ese orden).
-      const userEmails = order.reference.users
-        .map((u) => u.email)
-        .filter((e): e is string => !!e);
+      const userEmails = order.reference.users.map((u) => u.email).filter((e): e is string => !!e);
       if (userEmails.length > 0) {
         for (const email of userEmails) {
           out.push({
@@ -304,9 +285,7 @@ export class NotificationsService {
     });
     const token = report?.tokens[0]?.token;
     if (!token) return null;
-    const base = this.config
-      .get('PUBLIC_VERIFY_URL', { infer: true })
-      .replace(/\/+$/, '');
+    const base = this.config.get('PUBLIC_VERIFY_URL', { infer: true }).replace(/\/+$/, '');
     return `${base}/${token}`;
   }
 

@@ -1,9 +1,4 @@
-import {
-  ForbiddenException,
-  Injectable,
-  Logger,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { JwtService } from '@nestjs/jwt';
@@ -75,10 +70,7 @@ export class AuthService {
     return this.issueTokens(user, meta);
   }
 
-  async refresh(
-    rawToken: string,
-    meta: { ip?: string; userAgent?: string },
-  ): Promise<LoginResult> {
+  async refresh(rawToken: string, meta: { ip?: string; userAgent?: string }): Promise<LoginResult> {
     if (!rawToken) {
       throw new UnauthorizedException('Refresh token ausente');
     }
@@ -248,12 +240,8 @@ export class AuthService {
     user: User,
     meta: { ip?: string; userAgent?: string },
   ): Promise<LoginResult> {
-    const accessTtl = this.parseDurationSeconds(
-      this.config.get('JWT_ACCESS_TTL', { infer: true }),
-    );
-    const refreshTtlMs = this.parseDurationMs(
-      this.config.get('JWT_REFRESH_TTL', { infer: true }),
-    );
+    const accessTtl = this.parseDurationSeconds(this.config.get('JWT_ACCESS_TTL', { infer: true }));
+    const refreshTtlMs = this.parseDurationMs(this.config.get('JWT_REFRESH_TTL', { infer: true }));
 
     const accessToken = await this.jwt.signAsync(
       { sub: user.id, role: user.role },

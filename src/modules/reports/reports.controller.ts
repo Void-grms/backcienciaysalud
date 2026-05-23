@@ -58,10 +58,7 @@ export class ReportsController {
   @Get('reports')
   @Roles(UserRole.admin)
   @ApiOperation({ summary: 'Lista las versiones generadas del informe' })
-  versions(
-    @Param('orderId', new ParseUUIDPipe()) orderId: string,
-    @CurrentUser() user: AuthUser,
-  ) {
+  versions(@Param('orderId', new ParseUUIDPipe()) orderId: string, @CurrentUser() user: AuthUser) {
     return this.service.listVersions(orderId, user);
   }
 }

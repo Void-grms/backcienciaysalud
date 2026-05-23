@@ -6,10 +6,7 @@ export function setupSwagger(app: INestApplication, appName: string): void {
     .setTitle(appName)
     .setDescription('API REST del sistema de laboratorio clinico')
     .setVersion('0.1.0')
-    .addBearerAuth(
-      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
-      'JWT',
-    )
+    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'JWT')
     .addCookieAuth('refreshToken')
     .addServer('/api/v1')
     .build();
