@@ -40,13 +40,20 @@ RUN apk add --no-cache \
 
 # Solo prod deps
 COPY package.json pnpm-lock.yaml* ./
+COPY .npmrc* ./
 RUN pnpm install --prod --frozen-lockfile || pnpm install --prod
 
 # Artefactos compilados (incluyen los templates Handlebars gracias a nest-cli.json)
 COPY --from=build /app/dist ./dist
 COPY --from=build /app/prisma ./prisma
-COPY --from=build /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=build /app/node_modules/@prisma ./node_modules/@prisma
+
+# Regeneramos el cliente Prisma aqui (en el runner) en lugar de copiarlo desde
+# el build stage. Razon: pnpm guarda el cliente generado en el virtual store
+# (node_modules/.pnpm/@prisma+client@X/node_modules/.prisma/) y expone
+# node_modules/.prisma como symlink. Copiar el symlink entre stages rompe
+# porque el destino real (en .pnpm/) no se copia tambien. Regenerar es mas
+# limpio y agnostico al package manager.
+RUN pnpm exec prisma generate
 
 EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \
