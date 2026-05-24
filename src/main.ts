@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
 import { ConfigService } from '@nestjs/config';
 import { ValidationPipe } from '@nestjs/common';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { Logger } from 'nestjs-pino';
 import helmet from 'helmet';
 import compression from 'compression';
@@ -13,10 +14,16 @@ import { Rfc7807ExceptionFilter } from '@shared/filters/rfc7807-exception.filter
 import type { Env } from '@config/env.validation';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, { bufferLogs: true });
   app.useLogger(app.get(Logger));
 
   const config = app.get(ConfigService<Env, true>);
+
+  // Detras de Railway/Cloudflare/Nginx la conexion HTTPS termina en el proxy.
+  // Sin `trust proxy`, Express ve la conexion como HTTP y `req.ip` reporta la
+  // IP del LB en vez de la del cliente — necesario para que las cookies
+  // `secure: true` se acepten y para auditar IPs reales.
+  app.set('trust proxy', 1);
 
   // El prefijo global ya contiene la version; el versioning URI agregaria
   // otro `v1` extra a cada ruta. Por ahora basta con prefix manual; cuando

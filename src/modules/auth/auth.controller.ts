@@ -160,8 +160,11 @@ export class AuthController {
     const isProd = this.config.get('NODE_ENV', { infer: true }) === 'production';
     res.cookie(REFRESH_COOKIE, token, {
       httpOnly: true,
+      // En produccion frontend y backend viven en dominios distintos
+      // (Railway asigna *.up.railway.app por servicio), asi que la cookie debe
+      // viajar en peticiones cross-site. Eso obliga a sameSite=None + secure.
       secure: isProd,
-      sameSite: 'lax',
+      sameSite: isProd ? 'none' : 'lax',
       path: '/api/v1/auth',
       expires: expiresAt,
     });
@@ -172,7 +175,7 @@ export class AuthController {
     return {
       httpOnly: true,
       secure: isProd,
-      sameSite: 'lax' as const,
+      sameSite: (isProd ? 'none' : 'lax') as 'none' | 'lax',
       path: '/api/v1/auth',
     };
   }
