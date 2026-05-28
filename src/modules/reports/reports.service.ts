@@ -1,6 +1,6 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { OrderState, Prisma, Sex } from '@prisma/client';
+import { OrderState, Prisma, ResultType, Sex } from '@prisma/client';
 import * as crypto from 'crypto';
 import * as QRCode from 'qrcode';
 
@@ -16,7 +16,9 @@ import { ReportTokenService } from './report-token.service';
 import {
   ReportCategoryGroup,
   ReportContext,
+  ReportPanelGroup,
   ReportProfessional,
+  ReportRangeLine,
   ReportResultRow,
 } from './report-context';
 import { TemplateRendererService } from './template-renderer.service';
@@ -182,8 +184,16 @@ export class ReportsService {
             test: {
               include: {
                 category: { select: { id: true, name: true, color: true, displayOrder: true } },
+                ranges: {
+                  // Solo rangos vigentes: effectiveTo null o futuro. Orden por
+                  // prioridad descendente para que los mas especificos salgan
+                  // primero en la columna del reporte.
+                  where: { OR: [{ effectiveTo: null }, { effectiveTo: { gt: new Date() } }] },
+                  orderBy: [{ priority: 'desc' }, { createdAt: 'asc' }],
+                },
               },
             },
+            panel: { select: { id: true, name: true } },
             result: { include: { appliedRange: true } },
           },
         },
@@ -236,55 +246,127 @@ export class ReportsService {
         test: {
           include: {
             category: { select: { id: true; name: true; color: true; displayOrder: true } };
+            ranges: true;
           };
         };
+        panel: { select: { id: true; name: true } };
         result: { include: { appliedRange: true } };
       };
     }>[],
   ): ReportCategoryGroup[] {
-    const groups = new Map<string, ReportCategoryGroup & { _order: number }>();
+    // Estructura: categoria -> panel (o null) -> rows[].
+    // Orden de paneles: orden del primer item del panel (preservamos
+    // displayOrder del OrderItem). Orden de categorias: cat.displayOrder.
+    type PanelBucket = ReportPanelGroup & { _order: number };
+    type CatBucket = {
+      categoryName: string;
+      categoryColor: string;
+      _order: number;
+      panels: Map<string, PanelBucket>;
+      hasMethod: boolean;
+    };
+    const cats = new Map<string, CatBucket>();
+
     for (const it of items) {
       const cat = it.test.category;
-      const key = cat.id;
-      if (!groups.has(key)) {
-        groups.set(key, {
+      let catBucket = cats.get(cat.id);
+      if (!catBucket) {
+        catBucket = {
           categoryName: cat.name,
           categoryColor: cat.color,
-          rows: [],
           _order: cat.displayOrder,
-        });
+          panels: new Map(),
+          hasMethod: false,
+        };
+        cats.set(cat.id, catBucket);
       }
-      const row: ReportResultRow = {
-        testName: it.test.name,
-        testCode: it.test.code,
-        unit: it.test.unit,
-        method: it.test.method,
-        resultType: it.test.resultType,
-        decimals: it.test.decimals,
-        valueNumeric: it.result?.valueNumeric != null ? Number(it.result.valueNumeric) : null,
-        valueText: it.result?.valueText ?? null,
-        observation: it.result?.observation ?? null,
-        flag: it.result?.flag ?? 'none',
-        appliedRange: it.result?.appliedRange
-          ? {
-              valueMin:
-                it.result.appliedRange.valueMin != null
-                  ? Number(it.result.appliedRange.valueMin)
-                  : null,
-              valueMax:
-                it.result.appliedRange.valueMax != null
-                  ? Number(it.result.appliedRange.valueMax)
-                  : null,
-              qualitativeExpected: it.result.appliedRange.qualitativeExpected,
-              displayText: it.result.appliedRange.displayText,
-            }
-          : null,
-      };
-      groups.get(key)!.rows.push(row);
+      if (it.test.method) catBucket.hasMethod = true;
+
+      const panelKey = it.panel?.id ?? '__loose__';
+      let panel = catBucket.panels.get(panelKey);
+      if (!panel) {
+        panel = {
+          panelName: it.panel?.name ?? null,
+          rows: [],
+          _order: it.displayOrder,
+        };
+        catBucket.panels.set(panelKey, panel);
+      }
+
+      panel.rows.push(this.buildRow(it));
     }
-    return Array.from(groups.values())
+
+    return Array.from(cats.values())
       .sort((a, b) => a._order - b._order)
-      .map(({ _order, ...g }) => g);
+      .map((c) => ({
+        categoryName: c.categoryName,
+        categoryColor: c.categoryColor,
+        showMethodColumn: c.hasMethod,
+        panels: Array.from(c.panels.values())
+          .sort((a, b) => a._order - b._order)
+          .map(({ _order, ...p }) => p),
+      }));
+  }
+
+  private buildRow(
+    it: Prisma.OrderItemGetPayload<{
+      include: {
+        test: { include: { ranges: true } };
+        result: { include: { appliedRange: true } };
+      };
+    }>,
+  ): ReportResultRow {
+    const appliedId = it.result?.appliedRangeId ?? null;
+    const lines: ReportRangeLine[] = it.test.ranges.map((r) => ({
+      text: this.formatRange(r, it.test.resultType, it.test.decimals),
+      highlighted: appliedId != null && r.id === appliedId,
+    }));
+
+    return {
+      testName: it.test.name,
+      testCode: it.test.code,
+      unit: it.test.unit,
+      method: it.test.method,
+      resultType: it.test.resultType,
+      decimals: it.test.decimals,
+      valueNumeric: it.result?.valueNumeric != null ? Number(it.result.valueNumeric) : null,
+      valueText: it.result?.valueText ?? null,
+      observation: it.result?.observation ?? null,
+      flag: it.result?.flag ?? 'none',
+      ranges: lines,
+    };
+  }
+
+  // Si el rango trae `displayText` lo respetamos literal (asi el catalogo
+  // controla la presentacion final, ej. "VARONES: 14 - 18 gr/dl"). Si no,
+  // armamos el texto desde valueMin/valueMax o qualitativeExpected.
+  private formatRange(
+    r: {
+      displayText: string | null;
+      qualitativeExpected: string | null;
+      valueMin: Prisma.Decimal | null;
+      valueMax: Prisma.Decimal | null;
+    },
+    resultType: ResultType,
+    decimals: number,
+  ): string {
+    if (r.displayText && r.displayText.trim()) return r.displayText.trim();
+    if (resultType === ResultType.qualitative && r.qualitativeExpected) {
+      return r.qualitativeExpected;
+    }
+    const min = r.valueMin != null ? this.formatNum(Number(r.valueMin), decimals) : null;
+    const max = r.valueMax != null ? this.formatNum(Number(r.valueMax), decimals) : null;
+    if (min != null && max != null) return `${min} - ${max}`;
+    if (min != null) return `≥ ${min}`;
+    if (max != null) return `≤ ${max}`;
+    return '—';
+  }
+
+  private formatNum(n: number, decimals: number): string {
+    return n.toLocaleString('es-PE', {
+      minimumFractionDigits: decimals,
+      maximumFractionDigits: decimals,
+    });
   }
 
   private async loadProfessionals(orderId: string): Promise<ReportProfessional[]> {

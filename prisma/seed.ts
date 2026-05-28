@@ -9,6 +9,8 @@ import {
 } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
+import { seedCatalogFromFormats } from './seed-catalog';
+
 const prisma = new PrismaClient();
 
 const BASE_CATEGORIES = [
@@ -222,6 +224,7 @@ async function main() {
   const professional = await seedProfessional();
   await seedCategories(professional.id);
   await seedSampleHemogram();
+  const catalog = await seedCatalogFromFormats(prisma);
   const { patient, user: patientUser } = await seedPatientUser();
   const { reference, user: referenceUser } = await seedReferenceUser();
 
@@ -229,7 +232,11 @@ async function main() {
   console.log('  - LabConfig:       ', lab.commercialName);
   console.log('  - Profesional:     ', professional.fullName);
   console.log('  - Categorias:      ', BASE_CATEGORIES.length);
-  console.log('  - Prueba ejemplo:  ', 'HB (Hemoglobina) con 3 rangos referenciales');
+  console.log('  - Catalogo de pruebas:');
+  console.log('      tests creados:  ', catalog.testsCreated);
+  console.log('      tests existentes:', catalog.testsSkipped);
+  console.log('      rangos creados:  ', catalog.rangesCreated);
+  console.log('      paneles creados: ', catalog.panelsCreated);
   console.log('');
   console.log('Usuarios de prueba (los 3 roles):');
   console.log('  [ADMIN]      login:', admin.email,        '  /  password: Admin123!');

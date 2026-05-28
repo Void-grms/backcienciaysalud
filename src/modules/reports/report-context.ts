@@ -36,6 +36,15 @@ export interface ReportOrder {
   deliveredAt: string | null;
 }
 
+// Cada linea de rango referencial que se imprime en la celda "Rango de Referencia".
+// Cuando el rango tiene displayText lo respetamos literal (preserva las
+// segmentaciones tipo "VARONES: 14-18 gr/dl" como vienen del catalogo).
+// Cuando no, lo armamos a partir de valueMin/valueMax + sex/edad inferidos.
+export interface ReportRangeLine {
+  text: string;
+  highlighted: boolean;
+}
+
 export interface ReportResultRow {
   testName: string;
   testCode: string;
@@ -47,18 +56,22 @@ export interface ReportResultRow {
   valueText: string | null;
   observation: string | null;
   flag: ResultFlag;
-  appliedRange: {
-    valueMin: number | null;
-    valueMax: number | null;
-    qualitativeExpected: string | null;
-    displayText: string | null;
-  } | null;
+  ranges: ReportRangeLine[];
+}
+
+// Sub-grupo dentro de una categoria: si los items vienen del mismo panel se
+// imprime su nombre como sub-cabecera (HEMOGRAMA COMPLETO debajo de
+// HEMATOLOGIA). Los items sueltos van al grupo sin nombre.
+export interface ReportPanelGroup {
+  panelName: string | null;
+  rows: ReportResultRow[];
 }
 
 export interface ReportCategoryGroup {
   categoryName: string;
   categoryColor: string;
-  rows: ReportResultRow[];
+  panels: ReportPanelGroup[];
+  showMethodColumn: boolean;
 }
 
 export interface ReportProfessional {

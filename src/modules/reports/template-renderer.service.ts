@@ -85,6 +85,24 @@ export class TemplateRendererService {
       return map[String(flag)] ?? '';
     });
 
+    // Marca corta para pintar pill al lado del valor (↑, ↓, ↑↑, ↓↓).
+    Handlebars.registerHelper('flagShort', (flag: unknown) => {
+      const map: Record<string, string> = {
+        critical_high: '↑↑',
+        critical_low: '↓↓',
+        high: '↑',
+        low: '↓',
+        abnormal: '!',
+      };
+      return map[String(flag)] ?? '';
+    });
+
+    // True cuando el flag justifica un pill visible (no normal, no none).
+    Handlebars.registerHelper('showFlagPill', (flag: unknown) => {
+      const s = String(flag);
+      return s === 'critical_high' || s === 'critical_low' || s === 'high' || s === 'low' || s === 'abnormal';
+    });
+
     Handlebars.registerHelper('formatRange', (range: unknown) => {
       if (!range) return '—';
       const r = range as {
