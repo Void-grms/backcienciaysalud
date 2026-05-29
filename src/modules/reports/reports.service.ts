@@ -233,11 +233,38 @@ export class ReportsService {
       },
       categories: this.groupByCategory(order.items),
       professionals,
+      flagsLegend: this.buildFlagsLegend(order.items),
       qrDataUrl,
       verificationUrl,
       reportVersion,
       generatedAt: this.fmtDate(new Date()) ?? '',
     };
+  }
+
+  // Detecta los flags que aparecen al menos una vez en el informe y devuelve
+  // su definicion humana para la leyenda al pie de los resultados. Solo
+  // listamos lo que el usuario ve marcado (no toda la enumeracion).
+  private buildFlagsLegend(
+    items: Prisma.OrderItemGetPayload<{
+      include: { result: true };
+    }>[],
+  ): { code: string; label: string }[] {
+    const FLAG_DEFINITIONS: Record<string, { code: string; label: string }> = {
+      high: { code: 'H', label: 'Resultado por encima del valor referencial' },
+      low: { code: 'L', label: 'Resultado por debajo del valor referencial' },
+      critical_high: { code: 'HH', label: 'Resultado en zona crítica alta (panico)' },
+      critical_low: { code: 'LL', label: 'Resultado en zona crítica baja (panico)' },
+      abnormal: { code: '!', label: 'Resultado fuera del valor esperado' },
+    };
+    const seen = new Set<string>();
+    for (const it of items) {
+      const f = it.result?.flag;
+      if (f && FLAG_DEFINITIONS[f]) seen.add(f);
+    }
+    return Array.from(seen).flatMap((f) => {
+      const def = FLAG_DEFINITIONS[f];
+      return def ? [def] : [];
+    });
   }
 
   private groupByCategory(

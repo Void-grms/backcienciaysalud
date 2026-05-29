@@ -81,12 +81,21 @@ export interface ReportProfessional {
   signatureUrl: string | null;
 }
 
+// Leyenda de flags que se renderiza al pie del listado de resultados —
+// solo incluye los flags que efectivamente aparecen en este informe, para
+// no mostrar definiciones que el usuario no esta viendo.
+export interface ReportFlagLegendItem {
+  code: string;
+  label: string;
+}
+
 export interface ReportContext {
   lab: ReportLab;
   patient: ReportPatient;
   order: ReportOrder;
   categories: ReportCategoryGroup[];
   professionals: ReportProfessional[];
+  flagsLegend: ReportFlagLegendItem[];
   qrDataUrl: string | null;
   verificationUrl: string | null;
   reportVersion: number;

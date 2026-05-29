@@ -4,9 +4,9 @@
   <meta charset="utf-8" />
   <title>Informe {{order.code}}</title>
   <style>
-    /* @page reserva 38mm abajo para el footer fijo (firma + QR) que se
-       repite en cada hoja del PDF. */
-    @page { size: A4; margin: 14mm 14mm 38mm 14mm; }
+    /* @page reserva 36mm abajo para el footer fijo (firma + metadata) que se
+       repite en cada hoja del PDF. El QR vive en el header (solo p1). */
+    @page { size: A4; margin: 12mm 12mm 36mm 12mm; }
     * { box-sizing: border-box; }
     body {
       font-family: 'Helvetica', 'Arial', sans-serif;
@@ -15,289 +15,445 @@
       margin: 0;
     }
     .accent { color: {{lab.primaryColor}}; }
-    .border-accent { border-color: {{lab.primaryColor}}; }
 
-    .header {
+    /* ──────────────────────────────────────────────────────────────
+       Header: 3 columnas — marca + contacto, card de orden, QR
+       ────────────────────────────────────────────────────────────── */
+    .brand-bar {
       display: grid;
-      grid-template-columns: auto 1fr;
-      gap: 16px;
-      align-items: center;
+      grid-template-columns: 1fr 200px 110px;
+      column-gap: 14px;
+      align-items: start;
       padding-bottom: 10px;
-      border-bottom: 2.5px solid {{lab.primaryColor}};
     }
-    .header .logo-cell {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      width: 130px;
+    .brand-col .brand-logo {
+      max-height: 70px;
+      max-width: 260px;
+      display: block;
+      margin-bottom: 6px;
     }
-    .header .logo {
-      max-height: 95px;
-      max-width: 130px;
-    }
-    .header .logo-fallback {
-      font-size: 22pt;
+    .brand-col .brand-fallback {
+      font-size: 18pt;
       font-weight: 800;
       color: {{lab.primaryColor}};
-      letter-spacing: -0.5px;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
     }
-    .header .lab-info {
-      display: grid;
-      grid-template-columns: 1fr auto;
-      gap: 2px 12px;
-      align-items: end;
+    .contact-list {
+      display: flex;
+      flex-direction: column;
+      gap: 3px;
       font-size: 9pt;
       color: #374151;
-      line-height: 1.45;
     }
-    .header .lab-info .name {
-      grid-column: 1 / -1;
-      font-size: 15pt;
-      font-weight: 800;
+    .contact-line {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      line-height: 1.3;
+    }
+    .contact-line svg {
+      width: 11px;
+      height: 11px;
       color: {{lab.primaryColor}};
-      letter-spacing: -0.3px;
-      margin-bottom: 2px;
+      flex-shrink: 0;
     }
-    .header .lab-info .contact {
-      grid-column: 1;
+
+    .order-card {
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 8px 12px;
+      background: #FFFFFF;
     }
-    .header .lab-info .order-meta {
-      grid-column: 2;
-      text-align: right;
-      align-self: end;
-    }
-    .header .lab-info .order-meta .code {
-      font-family: 'Courier New', monospace;
+    .order-card-title {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 7.5pt;
       font-weight: 700;
+      letter-spacing: 0.6px;
+      color: #6B7280;
+      text-transform: uppercase;
+      margin-bottom: 3px;
+    }
+    .order-card-title svg {
+      width: 11px;
+      height: 11px;
+      color: {{lab.primaryColor}};
+    }
+    .order-card-code {
+      font-family: 'Courier New', monospace;
+      font-weight: 800;
       color: {{lab.primaryColor}};
       font-size: 13pt;
       letter-spacing: 0.5px;
+      margin-bottom: 6px;
     }
-    .header .lab-info .order-meta .gen {
+    .order-card-line {
+      display: flex;
+      align-items: center;
+      gap: 5px;
       font-size: 8.5pt;
+      color: #4B5563;
+      line-height: 1.4;
+    }
+    .order-card-line svg {
+      width: 10px;
+      height: 10px;
       color: #6B7280;
+      flex-shrink: 0;
     }
 
-    .patient-block {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 6px 24px;
-      margin: 14px 0 6px;
-      padding: 10px 14px;
-      background: #F3F4F6;
-      border-left: 4px solid {{lab.primaryColor}};
+    .qr-block {
+      text-align: center;
     }
-    .patient-block .field { font-size: 9pt; }
-    .patient-block .field .label {
+    .qr-block img {
+      width: 100px;
+      height: 100px;
+      display: block;
+      border: 1px solid #E5E7EB;
+      padding: 3px;
+      border-radius: 6px;
+    }
+    .qr-block .qr-label {
+      font-size: 7pt;
       color: #6B7280;
-      text-transform: uppercase;
-      font-size: 7.5pt;
-      letter-spacing: 0.5px;
-    }
-    .patient-block .field .value {
-      font-weight: 600;
-      font-size: 10pt;
+      margin-top: 4px;
     }
 
+    /* Linea divisoria en color de marca, debajo del header */
+    .brand-divider {
+      height: 1.5px;
+      background: {{lab.primaryColor}};
+      margin: 0 0 14px 0;
+      opacity: 0.7;
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       Banner de enmendamiento (solo si aplica)
+       ────────────────────────────────────────────────────────────── */
     .amend-banner {
       background: #FEF3C7;
       border: 1px solid #F59E0B;
       color: #78350F;
       padding: 8px 12px;
-      margin: 6px 0 10px;
+      margin: 0 0 12px;
       font-size: 9pt;
+      border-radius: 6px;
     }
 
+    /* ──────────────────────────────────────────────────────────────
+       Card del paciente con tag superior tipo chip
+       ────────────────────────────────────────────────────────────── */
+    .patient-card {
+      border: 1px solid #E5E7EB;
+      border-radius: 10px;
+      padding: 12px 14px 10px;
+      margin-bottom: 14px;
+    }
+    .card-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 3px 9px;
+      background: rgba(15, 118, 110, 0.10);
+      color: {{lab.primaryColor}};
+      border-radius: 999px;
+      font-size: 8pt;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      margin-bottom: 10px;
+    }
+    .card-tag svg {
+      width: 11px;
+      height: 11px;
+    }
+    .patient-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 9px 28px;
+    }
+    .patient-grid .field .label {
+      color: #6B7280;
+      font-size: 8.5pt;
+      margin-bottom: 1px;
+    }
+    .patient-grid .field .value {
+      font-weight: 700;
+      font-size: 10pt;
+      padding-bottom: 2px;
+      border-bottom: 1px dotted #D1D5DB;
+      color: #111827;
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       Categoria como pill grande con icono
+       ────────────────────────────────────────────────────────────── */
     .category-block { margin: 14px 0; page-break-inside: avoid; }
-    .category-title {
+    .category-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 14px;
       background: {{lab.primaryColor}};
       color: #FFFFFF;
-      padding: 5px 10px;
+      border-radius: 999px;
       font-weight: 700;
-      font-size: 10.5pt;
+      font-size: 10pt;
       letter-spacing: 0.5px;
       text-transform: uppercase;
+      margin-bottom: 6px;
     }
+    .category-pill svg { width: 12px; height: 12px; }
     .panel-title {
       background: #F3F4F6;
       color: #1F2937;
       padding: 4px 10px;
       font-weight: 700;
-      font-size: 10pt;
+      font-size: 9.5pt;
       letter-spacing: 0.3px;
       text-transform: uppercase;
       border-bottom: 1px solid #D1D5DB;
     }
 
+    /* ──────────────────────────────────────────────────────────────
+       Tabla de resultados
+       ────────────────────────────────────────────────────────────── */
     table.results {
       width: 100%;
-      border-collapse: collapse;
+      border-collapse: separate;
+      border-spacing: 0;
       table-layout: fixed;
       font-size: 9.5pt;
+      border: 1px solid #E5E7EB;
+      border-radius: 8px;
+      overflow: hidden;
     }
     table.results thead th {
-      background: #E5E7EB;
-      color: #111827;
+      background: #F3F4F6;
+      color: #1F2937;
       text-align: left;
-      padding: 5px 6px;
-      font-size: 8.5pt;
+      padding: 6px 8px;
+      font-size: 8pt;
       font-weight: 700;
       text-transform: uppercase;
-      letter-spacing: 0.4px;
-      border-bottom: 1px solid #9CA3AF;
+      letter-spacing: 0.5px;
+      border-bottom: 1px solid #D1D5DB;
     }
     table.results td {
-      padding: 5px 6px;
-      border-bottom: 1px solid #E5E7EB;
-      vertical-align: top;
+      padding: 8px;
+      border-bottom: 1px solid #F3F4F6;
+      vertical-align: middle;
     }
-    /* Columnas: con y sin metodo */
-    table.results.with-method .col-test  { width: 28%; }
-    table.results.with-method .col-value { width: 12%; font-family: 'Courier New', monospace; }
+    table.results tbody tr:last-child td { border-bottom: 0; }
+
+    table.results.with-method .col-test  { width: 26%; }
+    table.results.with-method .col-value { width: 14%; text-align: center; }
     table.results.with-method .col-unit  { width: 10%; }
-    table.results.with-method .col-range { width: 36%; }
-    table.results.with-method .col-method{ width: 14%; font-size: 8.5pt; color: #4B5563; }
+    table.results.with-method .col-range { width: 34%; }
+    table.results.with-method .col-method{ width: 16%; font-size: 8.5pt; color: #4B5563; }
 
     table.results.no-method .col-test  { width: 34%; }
-    table.results.no-method .col-value { width: 14%; font-family: 'Courier New', monospace; }
+    table.results.no-method .col-value { width: 16%; text-align: center; }
     table.results.no-method .col-unit  { width: 12%; }
-    table.results.no-method .col-range { width: 40%; }
+    table.results.no-method .col-range { width: 38%; }
 
     .range-line {
       display: block;
       font-size: 9pt;
       line-height: 1.3;
     }
-    .range-line.highlighted {
+    .range-line.highlighted { font-weight: 700; color: #111827; }
+    .range-line:not(.highlighted) { color: #4B5563; }
+
+    /* Valor centrado con badge de flag debajo (estilo del mockup) */
+    .value-cell {
+      text-align: center;
+    }
+    .value-cell .value {
+      font-size: 11pt;
       font-weight: 700;
+      display: block;
+      line-height: 1.2;
       color: #111827;
     }
-    .range-line:not(.highlighted) {
-      color: #4B5563;
+    .value-cell.flag-critical .value { color: #B91C1C; }
+    .value-cell.flag-abnormal .value { color: #B45309; }
+    .flag-badge {
+      display: inline-block;
+      margin-top: 3px;
+      font-size: 8pt;
+      font-weight: 800;
+      line-height: 1;
+      padding: 3px 5px;
+      min-width: 18px;
+      border-radius: 999px;
+      letter-spacing: 0.3px;
     }
-
-    .value-cell {
-      font-size: 10.5pt;
-      font-weight: 700;
-    }
-    .value-cell.flag-critical {
-      color: #B91C1C;
-      background: #FEE2E2;
-      padding: 1px 4px;
-    }
-    .value-cell.flag-abnormal { color: #B45309; }
-    .value-cell.flag-normal { color: #111827; font-weight: 600; }
+    .flag-badge.flag-critical { background: #FEE2E2; color: #B91C1C; }
+    .flag-badge.flag-abnormal { background: #FEF3C7; color: #92400E; }
 
     .observation {
-      color: #4B5563;
+      color: #6B7280;
       font-size: 8.5pt;
       font-style: italic;
       display: block;
-      margin-top: 2px;
+      margin-top: 3px;
     }
-    .flag-pill {
-      display: inline-block;
-      font-size: 7.5pt;
-      font-weight: 700;
-      letter-spacing: 0.4px;
-      padding: 1px 5px;
-      margin-left: 4px;
-      border-radius: 3px;
-    }
-    .flag-pill.flag-critical { background: #FEE2E2; color: #B91C1C; }
-    .flag-pill.flag-abnormal { background: #FEF3C7; color: #B45309; }
 
-    /* Footer fijo al pie de cada hoja del PDF: firma + QR + metadata.
-       Chrome ancla position:fixed al borde de la pagina (no al area de
-       contenido), asi que bottom:0 lo deja pegado al fondo. El @page tiene
-       margin-bottom: 38mm reservado para que el footer (~36mm) viva ahi
-       sin pisar el contenido. Se repite en cada pagina. */
+    /* ──────────────────────────────────────────────────────────────
+       Leyenda de flags (solo flags presentes en el informe)
+       ────────────────────────────────────────────────────────────── */
+    .flag-legend {
+      margin: 10px 0 0;
+      padding: 8px 12px;
+      background: #FFFBEB;
+      border: 1px solid #FDE68A;
+      border-radius: 8px;
+      font-size: 8.5pt;
+      color: #78350F;
+    }
+    .flag-legend ul {
+      list-style: none;
+      margin: 0;
+      padding: 0;
+    }
+    .flag-legend li {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 1px 0;
+    }
+    .flag-legend .badge-inline {
+      display: inline-block;
+      min-width: 18px;
+      text-align: center;
+      padding: 2px 5px;
+      border-radius: 999px;
+      font-size: 8pt;
+      font-weight: 800;
+      background: #FEF3C7;
+      color: #92400E;
+    }
+    .flag-legend .badge-inline.crit {
+      background: #FEE2E2;
+      color: #B91C1C;
+    }
+
+    /* ──────────────────────────────────────────────────────────────
+       Footer fijo (firma + metadata). Posicionado por @page margin.
+       ────────────────────────────────────────────────────────────── */
     .page-footer {
       position: fixed;
       bottom: 0;
       left: 0;
       right: 0;
-      height: 36mm;
-      padding: 5mm 14mm 4mm;
+      height: 34mm;
+      padding: 6mm 12mm 4mm;
       border-top: 1.5px solid {{lab.primaryColor}};
       background: #FFFFFF;
       display: grid;
-      grid-template-columns: auto 1fr auto;
-      column-gap: 16mm;
+      grid-template-columns: 1fr auto;
+      column-gap: 18mm;
       align-items: center;
     }
-    .page-footer .signatures {
+    .footer-emit {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      column-gap: 8px;
+      align-items: center;
+    }
+    .footer-emit .shield {
+      width: 32px;
+      height: 32px;
+      color: {{lab.primaryColor}};
+    }
+    .footer-emit .lines {
+      font-size: 8.5pt;
+      color: #4B5563;
+      line-height: 1.5;
+    }
+    .footer-emit .lines .main {
+      color: #111827;
+      font-weight: 600;
+    }
+    .footer-emit .lines .code {
+      font-family: 'Courier New', monospace;
+      color: {{lab.primaryColor}};
+      font-weight: 700;
+    }
+
+    .footer-signatures {
       display: grid;
       grid-template-columns: repeat({{#if professionals.length}}{{professionals.length}}{{else}}1{{/if}}, auto);
-      gap: 12mm;
-      align-items: end;
+      gap: 14mm;
     }
-    .page-footer .signature {
+    .footer-signature {
       text-align: center;
       font-size: 8.5pt;
       min-width: 45mm;
     }
-    .page-footer .signature img {
+    .footer-signature img {
       max-height: 14mm;
-      max-width: 45mm;
+      max-width: 50mm;
       display: block;
       margin: 0 auto 1mm;
     }
-    .page-footer .signature .line {
-      border-top: 1px solid #6B7280;
-      padding-top: 1.5mm;
+    .footer-signature .name {
       font-weight: 700;
-      font-size: 9pt;
+      font-size: 9.5pt;
       color: #111827;
+      padding-top: 1mm;
+      border-top: 1px solid #6B7280;
     }
-    .page-footer .signature .title {
+    .footer-signature .title,
+    .footer-signature .license {
       color: #6B7280;
-      font-size: 7.5pt;
+      font-size: 8pt;
       line-height: 1.3;
     }
-    .page-footer .meta {
-      font-size: 7.5pt;
-      color: #6B7280;
-      text-align: center;
-      line-height: 1.4;
-    }
-    .page-footer .qr-block {
-      text-align: center;
-      font-size: 6.5pt;
-      color: #6B7280;
-    }
-    .page-footer .qr-block img {
-      width: 22mm;
-      height: 22mm;
-      display: block;
-      margin: 0 auto;
-    }
-    .page-footer .qr-block .label { margin-top: 1mm; }
   </style>
 </head>
 <body>
-  <header class="header">
-    <div class="logo-cell">
+  <header class="brand-bar">
+    <!-- Columna 1: logo + contacto -->
+    <div class="brand-col">
       {{#if lab.logoUrl}}
-        <img class="logo" src="{{lab.logoUrl}}" alt="Logo" />
+        <img class="brand-logo" src="{{lab.logoUrl}}" alt="Logo" />
       {{else}}
-        <div class="logo-fallback">{{lab.commercialName}}</div>
+        <div class="brand-fallback">{{lab.commercialName}}</div>
+      {{/if}}
+      <div class="contact-list">
+        {{#if lab.address}}
+          <div class="contact-line">{{icon "map-pin"}} {{lab.address}}</div>
+        {{/if}}
+        {{#if lab.phone}}
+          <div class="contact-line">{{icon "phone"}} Tel: {{lab.phone}}</div>
+        {{/if}}
+        {{#if lab.taxId}}
+          <div class="contact-line">{{icon "file-text"}} RUC: {{lab.taxId}}</div>
+        {{/if}}
+      </div>
+    </div>
+
+    <!-- Columna 2: card de orden -->
+    <div class="order-card">
+      <div class="order-card-title">{{icon "file-text"}} Orden de servicio</div>
+      <div class="order-card-code">{{order.code}}</div>
+      <div class="order-card-line">{{icon "calendar"}} Reporte v{{reportVersion}}</div>
+      <div class="order-card-line">{{icon "clock"}} Generado: {{generatedAt}}</div>
+    </div>
+
+    <!-- Columna 3: QR -->
+    <div class="qr-block">
+      {{#if qrDataUrl}}
+        <img src="{{qrDataUrl}}" alt="Codigo QR de verificacion" />
+        <div class="qr-label">Verifica con el QR</div>
       {{/if}}
     </div>
-    <div class="lab-info">
-      <div class="name">{{lab.commercialName}}</div>
-      <div class="contact">
-        {{#if lab.address}}<div>{{lab.address}}</div>{{/if}}
-        {{#if lab.phone}}<div>Tel: {{lab.phone}}</div>{{/if}}
-        {{#if lab.taxId}}<div>RUC: {{lab.taxId}}</div>{{/if}}
-      </div>
-      <div class="order-meta">
-        <div class="code">{{order.code}}</div>
-        <div class="gen">Reporte v{{reportVersion}}</div>
-        <div class="gen">Generado: {{generatedAt}}</div>
-      </div>
-    </div>
   </header>
+
+  <div class="brand-divider"></div>
 
   {{#if order.isAmended}}
     <div class="amend-banner">
@@ -306,40 +462,43 @@
     </div>
   {{/if}}
 
-  <section class="patient-block">
-    <div class="field">
-      <div class="label">Paciente</div>
-      <div class="value">{{patient.fullName}}</div>
+  <section class="patient-card">
+    <div class="card-tag">{{icon "user"}} Datos del paciente</div>
+    <div class="patient-grid">
+      <div class="field">
+        <div class="label">Paciente:</div>
+        <div class="value">{{patient.fullName}}</div>
+      </div>
+      <div class="field">
+        <div class="label">Documento:</div>
+        <div class="value">{{patient.documentType}} {{patient.documentNumber}}</div>
+      </div>
+      <div class="field">
+        <div class="label">Edad / Sexo:</div>
+        <div class="value">{{patient.age}} — {{patient.sex}}</div>
+      </div>
+      <div class="field">
+        <div class="label">Fecha de muestra:</div>
+        <div class="value">{{#if order.sampleTakenAt}}{{order.sampleTakenAt}}{{else}}—{{/if}}</div>
+      </div>
+      {{#if order.requestingDoctor}}
+        <div class="field">
+          <div class="label">Médico solicitante:</div>
+          <div class="value">{{order.requestingDoctor}}</div>
+        </div>
+      {{/if}}
+      {{#if order.reference}}
+        <div class="field">
+          <div class="label">Referencia:</div>
+          <div class="value">{{order.reference}}</div>
+        </div>
+      {{/if}}
     </div>
-    <div class="field">
-      <div class="label">Documento</div>
-      <div class="value">{{patient.documentType}} {{patient.documentNumber}}</div>
-    </div>
-    <div class="field">
-      <div class="label">Edad / Sexo</div>
-      <div class="value">{{patient.age}} — {{patient.sex}}</div>
-    </div>
-    <div class="field">
-      <div class="label">Fecha de muestra</div>
-      <div class="value">{{order.sampleTakenAt}}</div>
-    </div>
-    {{#if order.requestingDoctor}}
-    <div class="field">
-      <div class="label">Medico solicitante</div>
-      <div class="value">{{order.requestingDoctor}}</div>
-    </div>
-    {{/if}}
-    {{#if order.reference}}
-    <div class="field">
-      <div class="label">Referencia</div>
-      <div class="value">{{order.reference}}</div>
-    </div>
-    {{/if}}
   </section>
 
   {{#each categories}}
   <section class="category-block">
-    <div class="category-title" style="background: {{categoryColor}}">{{categoryName}}</div>
+    <div class="category-pill" style="background: {{categoryColor}}">{{icon "flask"}} {{categoryName}}</div>
     {{#each panels}}
       {{#if panelName}}
         <div class="panel-title">{{panelName}}</div>
@@ -362,12 +521,12 @@
               {{#if observation}}<span class="observation">Obs: {{observation}}</span>{{/if}}
             </td>
             <td class="col-value value-cell {{flagClass flag}}">
-              {{#if (eq resultType 'numeric')}}
-                {{formatNumber valueNumeric decimals}}
-              {{else}}
-                {{valueText}}
+              <span class="value">
+                {{#if (eq resultType 'numeric')}}{{formatNumber valueNumeric decimals}}{{else}}{{valueText}}{{/if}}
+              </span>
+              {{#if (showFlagPill flag)}}
+                <span class="flag-badge {{flagClass flag}}">{{flagShort flag}}</span>
               {{/if}}
-              {{#if (showFlagPill flag)}}<span class="flag-pill {{flagClass flag}}">{{flagShort flag}}</span>{{/if}}
             </td>
             <td class="col-unit">{{unit}}</td>
             <td class="col-range">
@@ -388,27 +547,40 @@
   </section>
   {{/each}}
 
+  {{#if flagsLegend.length}}
+    <aside class="flag-legend">
+      <ul>
+        {{#each flagsLegend}}
+          <li>
+            <span class="badge-inline {{#if (eq code 'HH')}}crit{{/if}}{{#if (eq code 'LL')}}crit{{/if}}">{{code}}</span>
+            {{label}}
+          </li>
+        {{/each}}
+      </ul>
+    </aside>
+  {{/if}}
+
   <footer class="page-footer">
-    <div class="signatures">
-      {{#each professionals}}
-      <div class="signature">
-        {{#if signatureUrl}}<img src="{{signatureUrl}}" alt="firma" />{{/if}}
-        <div class="line">{{fullName}}</div>
-        {{#if professionalTitle}}<div class="title">{{professionalTitle}}</div>{{/if}}
-        {{#if licenseNumber}}<div class="title">{{licenseNumber}}</div>{{/if}}
+    <div class="footer-emit">
+      <span class="shield">{{icon "shield-check"}}</span>
+      <div class="lines">
+        <div class="main">Informe emitido por {{lab.commercialName}}</div>
+        <div>
+          <span class="code">{{order.code}}</span>
+          {{#if order.validatedAt}} · Validado: {{order.validatedAt}}{{/if}}
+        </div>
       </div>
+    </div>
+    <div class="footer-signatures">
+      {{#each professionals}}
+        <div class="footer-signature">
+          {{#if signatureUrl}}<img src="{{signatureUrl}}" alt="firma" />{{/if}}
+          <div class="name">{{fullName}}</div>
+          {{#if professionalTitle}}<div class="title">{{professionalTitle}}</div>{{/if}}
+          {{#if licenseNumber}}<div class="license">{{licenseNumber}}</div>{{/if}}
+        </div>
       {{/each}}
     </div>
-    <div class="meta">
-      Informe emitido por {{lab.commercialName}}<br />
-      {{order.code}}{{#if order.validatedAt}} · Validado {{order.validatedAt}}{{/if}}
-    </div>
-    {{#if qrDataUrl}}
-    <div class="qr-block">
-      <img src="{{qrDataUrl}}" alt="Codigo QR de verificacion" />
-      <div class="label">Verifica con el QR</div>
-    </div>
-    {{/if}}
   </footer>
 </body>
 </html>
