@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <title>Informe {{order.code}}</title>
   <style>
-    @page { size: A4; margin: 18mm 14mm; }
+    /* @page reserva 38mm abajo para el footer fijo (firma + QR) que se
+       repite en cada hoja del PDF. */
+    @page { size: A4; margin: 14mm 14mm 38mm 14mm; }
     * { box-sizing: border-box; }
     body {
       font-family: 'Helvetica', 'Arial', sans-serif;
@@ -16,26 +18,64 @@
     .border-accent { border-color: {{lab.primaryColor}}; }
 
     .header {
+      display: grid;
+      grid-template-columns: auto 1fr;
+      gap: 16px;
+      align-items: center;
+      padding-bottom: 10px;
+      border-bottom: 2.5px solid {{lab.primaryColor}};
+    }
+    .header .logo-cell {
       display: flex;
       align-items: center;
-      justify-content: space-between;
-      padding-bottom: 8px;
-      border-bottom: 2px solid {{lab.primaryColor}};
+      justify-content: center;
+      width: 130px;
     }
     .header .logo {
-      max-height: 60px;
-      max-width: 180px;
+      max-height: 95px;
+      max-width: 130px;
+    }
+    .header .logo-fallback {
+      font-size: 22pt;
+      font-weight: 800;
+      color: {{lab.primaryColor}};
+      letter-spacing: -0.5px;
     }
     .header .lab-info {
-      text-align: right;
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 2px 12px;
+      align-items: end;
       font-size: 9pt;
-      color: #4B5563;
-      line-height: 1.4;
+      color: #374151;
+      line-height: 1.45;
     }
     .header .lab-info .name {
-      font-size: 13pt;
+      grid-column: 1 / -1;
+      font-size: 15pt;
+      font-weight: 800;
+      color: {{lab.primaryColor}};
+      letter-spacing: -0.3px;
+      margin-bottom: 2px;
+    }
+    .header .lab-info .contact {
+      grid-column: 1;
+    }
+    .header .lab-info .order-meta {
+      grid-column: 2;
+      text-align: right;
+      align-self: end;
+    }
+    .header .lab-info .order-meta .code {
+      font-family: 'Courier New', monospace;
       font-weight: 700;
       color: {{lab.primaryColor}};
+      font-size: 13pt;
+      letter-spacing: 0.5px;
+    }
+    .header .lab-info .order-meta .gen {
+      font-size: 8.5pt;
+      color: #6B7280;
     }
 
     .patient-block {
@@ -57,20 +97,6 @@
     .patient-block .field .value {
       font-weight: 600;
       font-size: 10pt;
-    }
-
-    .order-meta {
-      display: flex;
-      justify-content: space-between;
-      font-size: 9pt;
-      color: #4B5563;
-      margin-bottom: 10px;
-    }
-    .order-meta .code {
-      font-family: 'Courier New', monospace;
-      font-weight: 700;
-      color: {{lab.primaryColor}};
-      font-size: 12pt;
     }
 
     .amend-banner {
@@ -181,49 +207,95 @@
     .flag-pill.flag-critical { background: #FEE2E2; color: #B91C1C; }
     .flag-pill.flag-abnormal { background: #FEF3C7; color: #B45309; }
 
-    .signatures {
-      margin-top: 24px;
+    /* Footer fijo al pie de cada hoja del PDF: firma + QR + metadata.
+       Chrome ancla position:fixed al borde de la pagina (no al area de
+       contenido), asi que bottom:0 lo deja pegado al fondo. El @page tiene
+       margin-bottom: 38mm reservado para que el footer (~36mm) viva ahi
+       sin pisar el contenido. Se repite en cada pagina. */
+    .page-footer {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      height: 36mm;
+      padding: 5mm 14mm 4mm;
+      border-top: 1.5px solid {{lab.primaryColor}};
+      background: #FFFFFF;
       display: grid;
-      grid-template-columns: repeat({{#if professionals.length}}{{professionals.length}}{{else}}1{{/if}}, 1fr);
-      gap: 16px;
+      grid-template-columns: auto 1fr auto;
+      column-gap: 16mm;
+      align-items: center;
     }
-    .signature { text-align: center; font-size: 9pt; }
-    .signature img { max-height: 60px; margin-bottom: 4px; }
-    .signature .line {
+    .page-footer .signatures {
+      display: grid;
+      grid-template-columns: repeat({{#if professionals.length}}{{professionals.length}}{{else}}1{{/if}}, auto);
+      gap: 12mm;
+      align-items: end;
+    }
+    .page-footer .signature {
+      text-align: center;
+      font-size: 8.5pt;
+      min-width: 45mm;
+    }
+    .page-footer .signature img {
+      max-height: 14mm;
+      max-width: 45mm;
+      display: block;
+      margin: 0 auto 1mm;
+    }
+    .page-footer .signature .line {
       border-top: 1px solid #6B7280;
-      margin-top: 36px;
-      padding-top: 4px;
+      padding-top: 1.5mm;
       font-weight: 700;
+      font-size: 9pt;
+      color: #111827;
     }
-    .signature .title { color: #6B7280; font-size: 8.5pt; }
-
-    .footer {
-      margin-top: 22px;
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-end;
-      font-size: 8pt;
+    .page-footer .signature .title {
       color: #6B7280;
-      border-top: 1px solid #E5E7EB;
-      padding-top: 8px;
+      font-size: 7.5pt;
+      line-height: 1.3;
     }
-    .footer .qr-block { text-align: center; }
-    .footer .qr-block img { width: 80px; height: 80px; }
-    .footer .qr-block .label { font-size: 7pt; margin-top: 2px; }
+    .page-footer .meta {
+      font-size: 7.5pt;
+      color: #6B7280;
+      text-align: center;
+      line-height: 1.4;
+    }
+    .page-footer .qr-block {
+      text-align: center;
+      font-size: 6.5pt;
+      color: #6B7280;
+    }
+    .page-footer .qr-block img {
+      width: 22mm;
+      height: 22mm;
+      display: block;
+      margin: 0 auto;
+    }
+    .page-footer .qr-block .label { margin-top: 1mm; }
   </style>
 </head>
 <body>
   <header class="header">
-    {{#if lab.logoUrl}}
-      <img class="logo" src="{{lab.logoUrl}}" alt="Logo" />
-    {{else}}
-      <div class="accent" style="font-size: 16pt; font-weight: 700;">{{lab.commercialName}}</div>
-    {{/if}}
+    <div class="logo-cell">
+      {{#if lab.logoUrl}}
+        <img class="logo" src="{{lab.logoUrl}}" alt="Logo" />
+      {{else}}
+        <div class="logo-fallback">{{lab.commercialName}}</div>
+      {{/if}}
+    </div>
     <div class="lab-info">
       <div class="name">{{lab.commercialName}}</div>
-      {{#if lab.address}}<div>{{lab.address}}</div>{{/if}}
-      {{#if lab.phone}}<div>Tel: {{lab.phone}}</div>{{/if}}
-      {{#if lab.taxId}}<div>RUC: {{lab.taxId}}</div>{{/if}}
+      <div class="contact">
+        {{#if lab.address}}<div>{{lab.address}}</div>{{/if}}
+        {{#if lab.phone}}<div>Tel: {{lab.phone}}</div>{{/if}}
+        {{#if lab.taxId}}<div>RUC: {{lab.taxId}}</div>{{/if}}
+      </div>
+      <div class="order-meta">
+        <div class="code">{{order.code}}</div>
+        <div class="gen">Reporte v{{reportVersion}}</div>
+        <div class="gen">Generado: {{generatedAt}}</div>
+      </div>
     </div>
   </header>
 
@@ -233,11 +305,6 @@
       Esta version sustituye al informe anterior{{#if order.previousCode}} ({{order.previousCode}}){{/if}}.
     </div>
   {{/if}}
-
-  <div class="order-meta">
-    <span class="code">{{order.code}}</span>
-    <span>Reporte v{{reportVersion}} — Generado: {{generatedAt}}</span>
-  </div>
 
   <section class="patient-block">
     <div class="field">
@@ -321,26 +388,25 @@
   </section>
   {{/each}}
 
-  <section class="signatures">
-    {{#each professionals}}
-    <div class="signature">
-      {{#if signatureUrl}}<img src="{{signatureUrl}}" alt="firma" />{{/if}}
-      <div class="line">{{fullName}}</div>
-      {{#if professionalTitle}}<div class="title">{{professionalTitle}}</div>{{/if}}
-      {{#if licenseNumber}}<div class="title">{{licenseNumber}}</div>{{/if}}
+  <footer class="page-footer">
+    <div class="signatures">
+      {{#each professionals}}
+      <div class="signature">
+        {{#if signatureUrl}}<img src="{{signatureUrl}}" alt="firma" />{{/if}}
+        <div class="line">{{fullName}}</div>
+        {{#if professionalTitle}}<div class="title">{{professionalTitle}}</div>{{/if}}
+        {{#if licenseNumber}}<div class="title">{{licenseNumber}}</div>{{/if}}
+      </div>
+      {{/each}}
     </div>
-    {{/each}}
-  </section>
-
-  <footer class="footer">
-    <div>
-      Informe emitido por {{lab.commercialName}} | {{order.code}}
-      {{#if order.validatedAt}}<br />Validado: {{order.validatedAt}}{{/if}}
+    <div class="meta">
+      Informe emitido por {{lab.commercialName}}<br />
+      {{order.code}}{{#if order.validatedAt}} · Validado {{order.validatedAt}}{{/if}}
     </div>
     {{#if qrDataUrl}}
     <div class="qr-block">
       <img src="{{qrDataUrl}}" alt="Codigo QR de verificacion" />
-      <div class="label">Verifica este informe escaneando el QR</div>
+      <div class="label">Verifica con el QR</div>
     </div>
     {{/if}}
   </footer>
