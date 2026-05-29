@@ -44,6 +44,20 @@ export class CreateReferenceRangeDto {
   @IsNumber()
   valueMax?: number;
 
+  @ApiPropertyOptional({
+    description: 'Umbral critico inferior (panico). Por debajo dispara critical_low.',
+  })
+  @IsOptional()
+  @IsNumber()
+  criticalMin?: number;
+
+  @ApiPropertyOptional({
+    description: 'Umbral critico superior (panico). Por encima dispara critical_high.',
+  })
+  @IsOptional()
+  @IsNumber()
+  criticalMax?: number;
+
   @ApiPropertyOptional({ description: 'Valor normal esperado (cualitativas)' })
   @IsOptional()
   @IsString()

@@ -17,7 +17,10 @@ export interface FlagResult {
   appliedRangeId: string | null;
 }
 
-type TestForFlag = Pick<Test, 'id' | 'resultType' | 'minCritical' | 'maxCritical'>;
+// minCritical/maxCritical de Test ya no se usan para flaggear — los criticos
+// viven en ReferenceRange. Los dejamos en el tipo por compatibilidad con
+// callers existentes que sigan armando el objeto Test completo.
+type TestForFlag = Pick<Test, 'id' | 'resultType'>;
 type PatientForFlag = Pick<Patient, 'sex' | 'birthDate'> & {
   physiologicalState?: PhysiologicalState | null;
 };
@@ -72,15 +75,16 @@ export class ResultFlaggerService {
     };
   }
 
-  private flagNumeric(test: TestForFlag, range: ReferenceRange | null, value: number): FlagResult {
-    if (test.minCritical != null && value <= this.toNumber(test.minCritical)) {
-      return { flag: ResultFlag.critical_low, appliedRangeId: range?.id ?? null };
-    }
-    if (test.maxCritical != null && value >= this.toNumber(test.maxCritical)) {
-      return { flag: ResultFlag.critical_high, appliedRangeId: range?.id ?? null };
-    }
+  private flagNumeric(_test: TestForFlag, range: ReferenceRange | null, value: number): FlagResult {
     if (!range) {
       return { flag: ResultFlag.none, appliedRangeId: null };
+    }
+    // Criticos van primero: si caen en panico, no nos importa el resto.
+    if (range.criticalMin != null && value <= this.toNumber(range.criticalMin)) {
+      return { flag: ResultFlag.critical_low, appliedRangeId: range.id };
+    }
+    if (range.criticalMax != null && value >= this.toNumber(range.criticalMax)) {
+      return { flag: ResultFlag.critical_high, appliedRangeId: range.id };
     }
     if (range.valueMin != null && value < this.toNumber(range.valueMin)) {
       return { flag: ResultFlag.low, appliedRangeId: range.id };

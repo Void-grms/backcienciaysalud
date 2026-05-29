@@ -33,6 +33,8 @@ export interface ParsedRangeRow {
   physiologicalState: PhysiologicalState | null;
   valueMin: number | null;
   valueMax: number | null;
+  criticalMin: number | null;
+  criticalMax: number | null;
   qualitativeExpected: string | null;
   displayText: string | null;
   priority: number;

@@ -310,6 +310,10 @@ model ReferenceRange {
   physiologicalState  PhysiologicalState? @map("physiological_state")
   valueMin            Decimal?            @map("value_min") @db.Decimal(12, 4)
   valueMax            Decimal?            @map("value_max") @db.Decimal(12, 4)
+  // Umbrales criticos (panico) por rango — disparan flag critical_low/high.
+  // Si quedan en NULL, el resultado solo puede flaggearse como low/high (no critico).
+  criticalMin         Decimal?            @map("critical_min") @db.Decimal(12, 4)
+  criticalMax         Decimal?            @map("critical_max") @db.Decimal(12, 4)
   qualitativeExpected String?             @map("qualitative_expected") @db.VarChar(80)
   displayText         String?             @map("display_text") @db.Text
   priority            Int                 @default(0)
@@ -363,6 +367,8 @@ model ReferenceRangeHistory {
   physiologicalState  PhysiologicalState? @map("physiological_state")
   valueMin            Decimal?            @map("value_min") @db.Decimal(12, 4)
   valueMax            Decimal?            @map("value_max") @db.Decimal(12, 4)
+  criticalMin         Decimal?            @map("critical_min") @db.Decimal(12, 4)
+  criticalMax         Decimal?            @map("critical_max") @db.Decimal(12, 4)
   qualitativeExpected String?             @map("qualitative_expected") @db.VarChar(80)
   displayText         String?             @map("display_text") @db.Text
   priority            Int

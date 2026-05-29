@@ -174,6 +174,8 @@ export class XlsxParserService {
       const qualitativeExpected = this.str(row, 10);
       const displayText = this.str(row, 11);
       const priority = this.int(row, 12) ?? 0;
+      const criticalMin = this.num(row, 13);
+      const criticalMax = this.num(row, 14);
 
       let ok = true;
       const fail = (column: string, message: string) => {
@@ -223,6 +225,8 @@ export class XlsxParserService {
         physiologicalState,
         valueMin,
         valueMax,
+        criticalMin,
+        criticalMax,
         qualitativeExpected,
         displayText,
         priority,

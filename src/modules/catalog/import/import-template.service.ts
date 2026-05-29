@@ -117,6 +117,8 @@ export class ImportTemplateService {
       { header: 'esperado_cualitativo', key: 'qualitativeExpected', width: 18 },
       { header: 'texto_mostrar', key: 'displayText', width: 30 },
       { header: 'prioridad', key: 'priority', width: 10 },
+      { header: 'critico_min', key: 'criticalMin', width: 12 },
+      { header: 'critico_max', key: 'criticalMax', width: 12 },
     ];
     this.styleHeader(ws);
     ws.addRow({
@@ -132,6 +134,8 @@ export class ImportTemplateService {
       qualitativeExpected: '',
       displayText: '70 - 99 mg/dL',
       priority: 0,
+      criticalMin: 40,
+      criticalMax: 400,
     });
     ws.addRow({
       testCode: 'DENGUE-IGG',
@@ -146,6 +150,8 @@ export class ImportTemplateService {
       qualitativeExpected: 'NEGATIVO',
       displayText: '',
       priority: 0,
+      criticalMin: '',
+      criticalMax: '',
     });
   }
 

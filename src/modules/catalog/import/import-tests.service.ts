@@ -326,6 +326,8 @@ export class ImportTestsService {
           physiologicalState: row.physiologicalState ?? null,
           valueMin: row.valueMin ?? null,
           valueMax: row.valueMax ?? null,
+          criticalMin: row.criticalMin ?? null,
+          criticalMax: row.criticalMax ?? null,
           qualitativeExpected: row.qualitativeExpected ?? null,
           displayText: row.displayText ?? null,
           priority: row.priority,

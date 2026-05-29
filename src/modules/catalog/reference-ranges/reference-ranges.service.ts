@@ -31,6 +31,8 @@ export class ReferenceRangesService {
         physiologicalState: dto.physiologicalState,
         valueMin: dto.valueMin,
         valueMax: dto.valueMax,
+        criticalMin: dto.criticalMin,
+        criticalMax: dto.criticalMax,
         qualitativeExpected: dto.qualitativeExpected,
         displayText: dto.displayText,
         priority: dto.priority ?? 0,
@@ -47,6 +49,8 @@ export class ReferenceRangesService {
     this.assertRangeConsistent({
       valueMin: merged.valueMin == null ? undefined : Number(merged.valueMin),
       valueMax: merged.valueMax == null ? undefined : Number(merged.valueMax),
+      criticalMin: merged.criticalMin == null ? undefined : Number(merged.criticalMin),
+      criticalMax: merged.criticalMax == null ? undefined : Number(merged.criticalMax),
       ageMinDays: merged.ageMinDays ?? undefined,
       ageMaxDays: merged.ageMaxDays ?? undefined,
     });
@@ -62,6 +66,8 @@ export class ReferenceRangesService {
           physiologicalState: dto.physiologicalState,
           valueMin: dto.valueMin,
           valueMax: dto.valueMax,
+          criticalMin: dto.criticalMin,
+          criticalMax: dto.criticalMax,
           qualitativeExpected: dto.qualitativeExpected,
           displayText: dto.displayText,
           priority: dto.priority,
@@ -98,11 +104,29 @@ export class ReferenceRangesService {
   private assertRangeConsistent(dto: {
     valueMin?: number;
     valueMax?: number;
+    criticalMin?: number;
+    criticalMax?: number;
     ageMinDays?: number;
     ageMaxDays?: number;
   }): void {
     if (dto.valueMin != null && dto.valueMax != null && dto.valueMin > dto.valueMax) {
       throw new BadRequestException('valueMin no puede ser mayor que valueMax');
+    }
+    if (dto.criticalMin != null && dto.criticalMax != null && dto.criticalMin > dto.criticalMax) {
+      throw new BadRequestException('criticalMin no puede ser mayor que criticalMax');
+    }
+    // El umbral critico debe quedar por fuera del rango normal: el critico
+    // inferior no puede ser mayor que el minimo normal, y el critico superior
+    // no puede ser menor que el maximo normal. Si no, no tiene sentido clinico.
+    if (dto.criticalMin != null && dto.valueMin != null && dto.criticalMin > dto.valueMin) {
+      throw new BadRequestException(
+        'criticalMin debe ser ≤ valueMin (el umbral critico va por debajo del rango normal)',
+      );
+    }
+    if (dto.criticalMax != null && dto.valueMax != null && dto.criticalMax < dto.valueMax) {
+      throw new BadRequestException(
+        'criticalMax debe ser ≥ valueMax (el umbral critico va por encima del rango normal)',
+      );
     }
     if (dto.ageMinDays != null && dto.ageMaxDays != null && dto.ageMinDays > dto.ageMaxDays) {
       throw new BadRequestException('ageMinDays no puede ser mayor que ageMaxDays');
@@ -125,6 +149,8 @@ export class ReferenceRangesService {
         physiologicalState: current.physiologicalState,
         valueMin: current.valueMin,
         valueMax: current.valueMax,
+        criticalMin: current.criticalMin,
+        criticalMax: current.criticalMax,
         qualitativeExpected: current.qualitativeExpected,
         displayText: current.displayText,
         priority: current.priority,
